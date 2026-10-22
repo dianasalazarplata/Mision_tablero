@@ -129,6 +129,16 @@ input[type=text]{font:inherit;font-size:1rem;color:var(--fg);background:var(--su
 .ans b{font-weight:600}
 .pill{font-family:var(--mono);font-size:.7rem;padding:1px 6px;border-radius:4px;background:var(--surface-2)}
 .ok{--c:var(--ok)} .mid{--c:var(--mid)} .bad{--c:var(--bad)}
+.mini{display:flex;flex-direction:column;gap:6px;background:var(--canvas);color:var(--tile-fg);border-radius:10px;padding:10px}
+.mini .eyebrow{color:var(--tile-accent)}
+.mrow{display:grid;grid-template-columns:3.2rem 1fr;gap:6px;align-items:stretch;border-top:1px dashed var(--canvas-dot);padding-top:6px}
+.mlab{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tile-muted);align-self:center}
+.mgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.mt{grid-column:span var(--s);background:var(--tile);border-radius:5px;border:2px solid var(--c,var(--canvas-dot));padding:4px;font-size:.6rem;line-height:1.15;color:var(--tile-fg);display:flex;flex-direction:column;gap:2px;min-width:0;overflow:hidden}
+.mt svg{width:22px;height:16px;color:var(--tile-accent)}
+.mt.ok{--c:var(--ok)} .mt.mid{--c:var(--mid)} .mt.bad{--c:var(--bad)}
+.legend{font-size:.68rem;color:var(--tile-muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;border:2px solid var(--c);margin-right:-6px}
 footer{text-align:center;font-size:.72rem;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.progress div{transition:none}.tile{animation:none}}
 </style>
@@ -403,18 +413,40 @@ function rResult(){
     const box=document.getElementById("ans"),btn=document.getElementById("show");box.hidden=!box.hidden;
     btn.textContent=box.hidden?"Ver respuestas correctas":"Ocultar respuestas";if(box.hidden)return;
     const pri=kpiPrincipal(S.aud),sec=pri==="monto"?"cantidad":"monto",first=S.items[0]&&S.items[0].id;
+    const OK=" ✓",NO=" ✗",low=s=>s.charAt(0).toLowerCase()+s.slice(1);
+    const kPri=b.kpi[pri][0],kSec=b.kpi[sec][0];
+    // --- Tu lienzo, con las capas marcadas ---
+    const groups=[];S.items.forEach(it=>{const r=sc.rows[it.id];(groups[r]=groups[r]||[]).push(it)});
+    const rowName={estado:"Arriba",tend:"Medio",detalle:"Abajo"};
+    const mini=groups.map((g,r)=>{const L=layerOfRow(r,sc.last);
+      return `<div class="mrow"><span class="mlab">${rowName[L]}</span><div class="mgrid">${g.map(it=>{
+        if(isKpi(it.id)){const good=it.id===pri?(first===pri?"ok":"mid"):(it.id===sec?(r===0?"ok":"bad"):"neu");
+          return `<div class="mt ${good}" style="--s:${it.s}"><span>${esc(b.kpi[it.id][0])}</span></div>`}
+        const ci=+it.id.slice(1),good=L===a.q[ci][4]?"ok":"bad";
+        return `<div class="mt ${good}" style="--s:${it.s}">${icon(S.charts[ci],"currentColor")}<span>${esc(a.q[ci][1])}</span></div>`}).join("")}</div></div>`}).join("");
+    // --- Líneas de corrección ---
+    const tipoOk=S.tipo===S.aud;
     const kOk=first===pri,kMid=!kOk&&sc.rows[pri]===0;
+    const secOk=sc.rows[sec]===0;
+    const pos=id=>S.items.findIndex(i=>i.id===id),dp=pos("distractor"),dOk=distractorOk(dp,pos(pri),pos(sec));
+    const qLines=a.q.map((q,i)=>{
+      const c=S.charts[i],cg=c===q[2]?"ok":(q[3]&&c===q[3]?"mid":"bad");
+      const id="c"+i,got=id in sc.rows?layerOfRow(sc.rows[id],sc.last):null,lg=got===q[4];
+      const cls=cg==="ok"&&lg?"ok":(cg==="bad"&&!lg?"bad":"mid");
+      const gTxt=cg==="ok"?`Gráfico: ${CH[c].n}${OK}`:cg==="mid"?`Gráfico: ${CH[c].n} · parcial (la mejor opción era ${low(CH[q[2]].n)})`:`Gráfico: ${c?CH[c].n:"sin respuesta"}${NO} · correspondía ${low(CH[q[2]].n)}`;
+      const lTxt=lg?`Capa: ${LAYERS[q[4]]}${OK}`:`Capa: quedó en ${got?LAYERS[got]:"ningún lado"}${NO} · correspondía ${low(LAYERS[q[4]])}`;
+      return `<div class="ans ${cls}"><b>${q[0]}</b><span>${gTxt}</span>${c==="torta"?`<span class="muted">La torta no suma: con más de dos categorías no se pueden comparar bien los ángulos.</span>`:""}<span>${lTxt}</span></div>`}).join("");
     box.className="card";
     box.innerHTML=`<div class="answers">
-      <div class="ans ${S.tipo===S.aud?"ok":"bad"}"><b>Tipo de tablero: ${TYPES[S.aud]}</b><span class="muted">Elegiste: ${S.tipo?TYPES[S.tipo]:"sin respuesta"}</span></div>
-      <div class="ans ${kOk?"ok":(kMid?"mid":"bad")}"><b>KPI principal arriba a la izquierda: ${esc(b.kpi[pri][0])}</b>
-        <span>${pri==="monto"?"Para quien decide el rumbo del negocio, lo que importa es la plata: la cantidad va en segundo lugar.":"Quien opera actúa sobre la cantidad (gente, transacciones, viajes): el monto va en segundo lugar."}</span>
-        <span class="muted">Pusiste primero: ${first?esc(itemLabel(first)):"nada"}</span></div>
-      <div class="ans ${sc.rows[sec]===0?"ok":"bad"}"><b>KPI secundario en la fila de arriba: ${esc(b.kpi[sec][0])}</b><span class="muted">${sc.rows[sec]===0?"Bien ubicado ✓":(sec in sc.rows?"Lo pusiste más abajo":"No lo pusiste")}</span></div>
-      ${(()=>{const pos=id=>S.items.findIndex(i=>i.id===id),dp=pos("distractor"),ok=distractorOk(dp,pos(pri),pos(sec));
-        return `<div class="ans ${ok?"ok":"bad"}"><b>Trampa: ${esc(b.kpi.distractor[0])}</b><span>Puede estar, pero nunca antes que ${esc(b.kpi[pri][0].toLowerCase())} y ${esc(b.kpi[sec][0].toLowerCase())}: no responde la pregunta principal del encargo.</span><span class="muted">${dp<0?"No la pusiste ✓":(ok?"La pusiste después de las importantes ✓":"La pusiste antes que una métrica más importante")}</span></div>`})()}
-      ${a.q.map((q,i)=>{const c=S.charts[i],cls=c===q[2]?"ok":(q[3]&&c===q[3]?"mid":"bad"),id="c"+i,got=id in sc.rows?layerOfRow(sc.rows[id],sc.last):null;
-        return `<div class="ans ${cls}"><b>${q[0]}</b><span>Mejor opción: ${CH[q[2]].n}${q[3]?` <span class="pill">parcial: ${CH[q[3]].n}</span>`:""}</span><span class="muted">Elegiste: ${c?CH[c].n:"sin respuesta"}</span>${c==="torta"?`<span>La torta no suma: con más de dos categorías no se pueden comparar bien los ángulos.</span>`:""}<span class="muted">Capa correcta: ${LAYERS[q[4]]} ${got===q[4]?"✓":`· quedó en ${got?LAYERS[got]:"ningún lado"}`}</span></div>`}).join("")}
+      <div class="mini"><span class="eyebrow">Tu lienzo</span>${mini||`<p class="muted">No armaste el lienzo.</p>`}
+        <p class="legend"><i class="ok"></i>bien ubicado <i class="mid"></i>parcial <i class="bad"></i>mal ubicado</p></div>
+      <div class="ans ${tipoOk?"ok":"bad"}"><b>Tipo de tablero</b><span>${tipoOk?`Elegiste ${TYPES[S.tipo]}${OK}`:`Elegiste ${S.tipo?TYPES[S.tipo]:"nada"}${NO} · correspondía ${TYPES[S.aud]}`}</span></div>
+      <div class="ans ${kOk?"ok":(kMid?"mid":"bad")}"><b>KPI principal, arriba a la izquierda</b>
+        <span>${kOk?`Pusiste primero ${low(kPri)}${OK}`:kMid?`${kPri} está en la fila de arriba, pero no primero · parcial`:`Pusiste primero ${first?low(itemLabel(first)):"nada"}${NO} · correspondía ${low(kPri)}`}</span>
+        <span class="muted">${pri==="monto"?`Para quien decide el rumbo del negocio importa la plata: ${low(kPri)} primero y ${low(kSec)} después.`:`Quien opera actúa sobre ${low(kPri)}: por eso va primero y ${low(kSec)} después.`}</span></div>
+      <div class="ans ${secOk?"ok":"bad"}"><b>KPI secundario en la fila de arriba</b><span>${secOk?`${kSec}, bien ubicado${OK}`:`${kSec}: ${sec in sc.rows?"lo pusiste más abajo":"no lo pusiste"}${NO}`}</span></div>
+      <div class="ans ${dOk?"ok":"bad"}"><b>Trampa: ${esc(b.kpi.distractor[0])}</b><span>${dp<0?`No la pusiste${OK}`:(dOk?`La pusiste después de las importantes${OK}`:`La pusiste antes que una métrica más importante${NO}`)}</span><span class="muted">Puede estar, pero nunca antes que ${low(kPri)} y ${low(kSec)}: no responde la pregunta principal del encargo.</span></div>
+      ${qLines}
     </div>`;
   };
 }
