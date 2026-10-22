@@ -1,0 +1,418 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Misión Tablero</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: juego de una columna para celular, una pantalla por paso, barra superior fija con reloj. Paso 3: lienzo claro tipo página de Power BI en grilla de 4 columnas, que se arma con toques. */
+:root{
+  --bg:#0b1726; --surface:#12233a; --surface-2:#1a3150; --line:#284567;
+  --fg:#eaf2fa; --muted:#9db1c7; --accent:#2fc4bd; --accent-ink:#04211f;
+  --ok:#46c88a; --mid:#e9b949; --bad:#ef6b6b;
+  --biz-a:#2fc4bd; --biz-b:#7c8cff; --biz-c:#f08a4b;
+  --canvas:#eef2f7; --canvas-dot:#cfd8e4; --tile:#ffffff; --tile-fg:#16263a; --tile-muted:#6b7d93; --tile-accent:#16867f; --tile-sel:#0f6f69;
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 32px;
+  background-image:linear-gradient(rgba(40,69,103,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(40,69,103,.35) 1px,transparent 1px);
+  background-size:28px 28px;background-attachment:fixed}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+main{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(2.3rem,10vw,3.3rem);font-weight:800;line-height:.95}
+h2{font-size:1.35rem;font-weight:800;line-height:1.15}
+h3{font-size:1rem;font-weight:600}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px 8px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
+.topbar .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.clock{font-family:var(--mono);font-size:1.05rem;font-weight:600;font-variant-numeric:tabular-nums;padding:3px 10px;border-radius:6px;background:var(--surface-2)}
+.clock.low{background:var(--bad);color:#fff}
+.progress{height:4px;background:var(--surface-2);border-radius:2px;overflow:hidden}
+.progress div{height:100%;background:var(--accent);transition:width .3s}
+
+.hero{padding-top:28px;display:flex;flex-direction:column;gap:14px}
+.hero h1 span{color:var(--accent)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.steps div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0}
+.steps b{display:block;font-family:var(--mono);color:var(--accent);font-size:.75rem}
+.steps span{font-size:.82rem}
+label.field{display:flex;flex-direction:column;gap:6px;font-size:.85rem;color:var(--muted)}
+input[type=text]{font:inherit;font-size:1rem;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px}
+.bizlist{display:flex;flex-direction:column;gap:10px}
+.biz{display:flex;gap:14px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:12px;padding:14px}
+.biz svg{flex:none;width:44px;height:44px}
+.biz small{display:block;color:var(--muted);font-size:.82rem}
+.biz:disabled{opacity:.45;cursor:not-allowed}
+.hint{font-size:.82rem;color:var(--muted)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.brief dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:10px 12px}
+.brief dt{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);padding-top:2px}
+.brief dd{margin:0}
+.tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.72rem;padding:4px 9px;border-radius:999px;background:var(--surface-2);color:var(--fg)}
+.tag i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:14px 18px;font-weight:600;font-size:1rem;width:100%}
+.primary:disabled{opacity:.4;cursor:not-allowed}
+.secondary{background:transparent;border:1px solid var(--line);border-radius:12px;padding:12px 16px;width:100%;color:var(--fg)}
+
+.choices{display:flex;flex-direction:column;gap:8px}
+.choice{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:2px}
+.choice small{color:var(--muted)}
+.choice[aria-pressed="true"],.chart[aria-pressed="true"]{border-color:var(--accent);background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--accent)}
+
+.qtext{font-family:var(--display);font-size:1.3rem;font-weight:600;line-height:1.25;text-wrap:balance}
+.charts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;align-items:center;gap:10px;text-align:left;min-width:0}
+.chart svg{flex:none;width:40px;height:30px}
+.chart span{font-size:.85rem;line-height:1.2}
+.charts .chart:last-child:nth-child(odd){grid-column:1/-1}
+
+/* Paso 3: paleta + lienzo */
+.palette h3{font-size:.8rem;font-family:var(--mono);font-weight:400;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.pal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.pal{display:flex;align-items:center;gap:8px;text-align:left;background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:8px;min-width:0;font-size:.8rem;line-height:1.2}
+.pal svg{flex:none;width:30px;height:22px}
+.pal .plus{flex:none;width:22px;height:22px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);color:var(--accent)}
+.pal:disabled{opacity:.35;cursor:default;border-style:solid}
+.pal:disabled .plus{color:var(--muted)}
+
+.canvas-wrap{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--canvas)}
+.pbi-bar{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface-2);font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.canvas{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(74px,auto);gap:6px;padding:8px;min-height:250px;align-content:start;
+  background-color:var(--canvas);background-image:radial-gradient(var(--canvas-dot) 1px,transparent 1px);background-size:16px 16px}
+.canvas .empty{grid-column:1/-1;align-self:center;text-align:center;color:var(--tile-muted);font-size:.85rem;padding:40px 16px}
+.tile{grid-column:span var(--s);background:var(--tile);color:var(--tile-fg);border:0;border-radius:7px;box-shadow:0 1px 4px rgba(4,20,40,.18);padding:7px;display:flex;flex-direction:column;gap:3px;text-align:left;min-width:0;overflow:hidden;animation:pop .2s ease}
+@keyframes pop{from{transform:scale(.94);opacity:.5}to{transform:none;opacity:1}}
+.tile svg{width:34px;height:24px}
+.tile .tt{font-size:.66rem;line-height:1.2;color:var(--tile-muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tile.kpi .kv{font-family:var(--mono);font-weight:600;font-size:.88rem;font-variant-numeric:tabular-nums;color:var(--tile-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile.kpi .tt{-webkit-line-clamp:2;font-size:.62rem}
+.tile[aria-pressed="true"]{box-shadow:0 0 0 3px var(--tile-sel)}
+.toolbar{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px}
+.toolbar p{font-size:.82rem}
+.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tools button{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:10px 4px;font-size:.78rem;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tools button b{font-family:var(--mono);font-size:1rem;color:var(--accent)}
+.tools button:disabled{opacity:.35;cursor:default}
+
+.result{align-items:stretch;text-align:center}
+.score{font-family:var(--display);font-weight:800;font-size:clamp(4rem,22vw,6rem);line-height:.9;color:var(--accent);font-variant-numeric:tabular-nums}
+.meta{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.breakdown{display:flex;flex-direction:column;gap:8px;text-align:left}
+.bk{display:grid;grid-template-columns:7.5rem 1fr 4.2rem;gap:8px;align-items:center;font-size:.85rem}
+.bk .bar{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.bk .bar div{height:100%;background:var(--accent)}
+.bk .mono{text-align:right}
+.stamp{font-family:var(--mono);font-size:.78rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px}
+.stamp .live{color:var(--fg)}
+.answers{display:flex;flex-direction:column;gap:10px;text-align:left}
+.ans{border-left:3px solid var(--c);padding-left:10px;font-size:.85rem;display:flex;flex-direction:column;gap:2px}
+.ans b{font-weight:600}
+.pill{font-family:var(--mono);font-size:.7rem;padding:1px 6px;border-radius:4px;background:var(--surface-2)}
+.ok{--c:var(--ok)} .mid{--c:var(--mid)} .bad{--c:var(--bad)}
+footer{text-align:center;font-size:.72rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.progress div{transition:none}.tile{animation:none}}
+</style>
+
+<main id="app"></main>
+
+<script>
+(function(){
+"use strict";
+const LIMIT=300; // 5 minutos
+const KEY="mision-tablero-v2";
+const PTS={tipo:150,graf:100,grafParcial:50,kpiPrincipal:100,kpiPrincipalFila:40,kpiSecundario:50,sinDistractora:50,capa:50,vel:50};
+
+// ---------- Gráficos (diapositiva 11) ----------
+const CH={
+  lineas:{n:"Gráfico de líneas",s:'<polyline points="3,25 12,16 20,19 29,8 37,5" fill="none" stroke="currentColor" stroke-width="2.4"/>'},
+  barrasH:{n:"Barras horizontales",s:'<rect x="3" y="3" width="32" height="5" fill="currentColor"/><rect x="3" y="11" width="24" height="5" fill="currentColor"/><rect x="3" y="19" width="16" height="5" fill="currentColor"/>'},
+  bala:{n:"Gráfico de bala",s:'<rect x="3" y="9" width="34" height="12" fill="currentColor" opacity=".25"/><rect x="3" y="12" width="24" height="6" fill="currentColor"/><rect x="30" y="6" width="2.5" height="18" fill="currentColor"/>'},
+  treemap:{n:"Treemap",s:'<rect x="3" y="3" width="19" height="24" fill="currentColor"/><rect x="24" y="3" width="13" height="13" fill="currentColor" opacity=".6"/><rect x="24" y="18" width="13" height="9" fill="currentColor" opacity=".35"/>'},
+  apiladas:{n:"Barras apiladas",s:'<g fill="currentColor"><rect x="4" y="12" width="7" height="15"/><rect x="16" y="6" width="7" height="21"/><rect x="28" y="9" width="7" height="18"/></g><g fill="currentColor" opacity=".4"><rect x="4" y="6" width="7" height="6"/><rect x="16" y="1" width="7" height="5"/><rect x="28" y="3" width="7" height="6"/></g>'},
+  dispersion:{n:"Dispersión",s:'<g fill="currentColor"><circle cx="7" cy="23" r="2.2"/><circle cx="13" cy="18" r="2.2"/><circle cx="18" cy="20" r="2.2"/><circle cx="24" cy="12" r="2.2"/><circle cx="30" cy="10" r="2.2"/><circle cx="35" cy="5" r="2.2"/></g>'},
+  calor:{n:"Mapa de calor",s:[0,1,2].map(r=>[0,1,2,3].map(c=>`<rect x="${3+c*9}" y="${3+r*8.5}" width="8" height="7.5" fill="currentColor" opacity="${[.25,.9,.5,.15,.6,.35,1,.45,.2,.7,.3,.85][r*4+c]}"/>`).join("")).join("")}
+};
+const CH_ORDER=["lineas","barrasH","bala","treemap","apiladas","dispersion","calor"];
+const icon=(k,c)=>`<svg viewBox="0 0 40 30" aria-hidden="true" style="color:${c||"var(--accent)"}">${CH[k].s}</svg>`;
+
+const LAYERS={estado:"Arriba (estado y metas)",tend:"Medio (tendencias y comparaciones)",detalle:"Abajo (detalle)"};
+const TYPES={estrategico:"Estratégico",tactico:"Táctico",operativo:"Operativo"};
+
+// ---------- Negocios, audiencias y preguntas ----------
+// q: [pregunta, título corto, correcto, parcial|null, capa]
+// kpi: monto, cantidad (el principal depende de la audiencia) y una distractora
+const BIZ={
+  gondola:{n:"La Góndola",d:"Cadena de 40 supermercados",c:"var(--biz-a)",
+    ico:'<svg viewBox="0 0 44 44"><path d="M8 12h4l4 18h18l4-13H15" fill="none" stroke="var(--biz-a)" stroke-width="2.6" stroke-linejoin="round"/><circle cx="18" cy="35" r="2.6" fill="var(--biz-a)"/><circle cx="31" cy="35" r="2.6" fill="var(--biz-a)"/></svg>',
+    kpi:{monto:["Monto vendido","$ 412 M"],cantidad:["Cantidad de tickets","128.450"],distractor:["Cantidad de sucursales","40"]},
+    aud:{
+      estrategico:{who:"El directorio de La Góndola.",what:"Decidir si la cadena va camino al objetivo de ventas del año y dónde invertir el próximo.",how:"Reunión una vez por mes. Una sola pantalla, para mirar de un vistazo.",
+        q:[["¿Estamos cumpliendo el objetivo anual de ventas de la cadena?","Ventas vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionaron las ventas en los últimos 12 meses?","Ventas últimos 12 meses","lineas",null,"tend"],["¿Qué categoría de productos aporta la mayor proporción de las ventas?","Ventas por categoría","barrasH","treemap","tend"],["¿Las sucursales que más invierten en promociones venden más?","Promociones vs. ventas por sucursal","dispersion",null,"detalle"]]},
+      tactico:{who:"La gerenta de la sucursal Centro.",what:"Entender por qué la sucursal no llega a la meta y qué corregir.",how:"Cada lunes, filtrando y comparando contra semanas anteriores.",
+        q:[["¿Cómo viene la sucursal esta semana contra la meta de ventas?","Ventas semana vs. meta","bala",null,"estado"],["¿Cómo evolucionaron las ventas semana a semana?","Ventas por semana","lineas","apiladas","tend"],["¿Cómo se componen las ventas según medio de pago (efectivo, débito, crédito, QR)?","Ventas por medio de pago","apiladas","treemap","tend"],["¿Qué categorías venden mejor y cuáles peor?","Ranking de categorías","barrasH",null,"detalle"]]},
+      operativo:{who:"El encargado de cajas del turno.",what:"Abrir o cerrar cajas a tiempo para que no se formen filas.",how:"En una pantalla junto a las cajas, actualizada todo el día.",
+        q:[["¿Estamos llegando a la cantidad de tickets esperada para hoy?","Tickets de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene la cantidad de clientes en espera hora a hora?","Clientes en espera por hora","lineas",null,"tend"],["¿En qué franjas horarias y líneas de cajas se forman las filas más largas?","Filas por franja y línea de cajas","calor",null,"tend"],["¿Qué cajas tienen más demoras ahora?","Ranking de demoras por caja","barrasH",null,"detalle"]]}
+    }},
+  cobranet:{n:"Cobranet",d:"Plataforma de cobro de servicios e impuestos",c:"var(--biz-b)",
+    ico:'<svg viewBox="0 0 44 44"><rect x="6" y="11" width="32" height="22" rx="4" fill="none" stroke="var(--biz-b)" stroke-width="2.6"/><rect x="6" y="16" width="32" height="4" fill="var(--biz-b)"/><rect x="11" y="25" width="9" height="3" rx="1" fill="var(--biz-b)"/></svg>',
+    kpi:{monto:["Monto recaudado","$ 231 M"],cantidad:["Cantidad de transacciones","356.900"],distractor:["Entes adheridos","1.240"]},
+    aud:{
+      estrategico:{who:"El directorio de Cobranet.",what:"Saber si la empresa va camino al objetivo de recaudación del año y qué priorizar.",how:"Reunión una vez por mes. Una sola pantalla, para mirar de un vistazo.",
+        q:[["¿Estamos cumpliendo el objetivo anual de recaudación?","Recaudación vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionó la recaudación en los últimos 12 meses?","Recaudación últimos 12 meses","lineas",null,"tend"],["¿Qué medio de pago aporta la mayor proporción de la recaudación?","Recaudación por medio de pago","barrasH","treemap","tend"],["¿Los entes con comisión más baja recaudan más?","Comisión vs. recaudación por ente","dispersion",null,"detalle"]]},
+      tactico:{who:"El gerente comercial.",what:"Detectar qué entes o medios de pago están por debajo de lo esperado y actuar.",how:"Cada lunes, filtrando y comparando contra semanas anteriores.",
+        q:[["¿Cómo viene la recaudación de la semana contra la meta?","Recaudación semana vs. meta","bala",null,"estado"],["¿Cómo evolucionó la cantidad de transacciones semana a semana?","Transacciones por semana","lineas","apiladas","tend"],["¿Cómo se compone la recaudación según medio de pago?","Recaudación por medio de pago","apiladas","treemap","tend"],["¿Qué entes recaudan más y cuáles menos?","Ranking de entes","barrasH",null,"detalle"]]},
+      operativo:{who:"La analista de monitoreo de transacciones.",what:"Detectar caídas o rechazos apenas ocurren y avisar al equipo técnico.",how:"Pantalla abierta todo el día, actualizada en tiempo real.",
+        q:[["¿Estamos llegando al volumen de transacciones esperado para hoy?","Transacciones de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene la tasa de rechazos hora a hora?","Tasa de rechazos por hora","lineas",null,"tend"],["¿En qué franjas horarias y medios de pago se concentran los rechazos?","Rechazos por franja y medio","calor",null,"tend"],["¿Qué entes tienen más pagos rechazados ahora?","Ranking de rechazos por ente","barrasH",null,"detalle"]]}
+    }},
+  viaja:{n:"Viajá",d:"App de viajes y envíos",c:"var(--biz-c)",
+    ico:'<svg viewBox="0 0 44 44"><path d="M22 6c-6 0-11 5-11 11 0 8 11 21 11 21s11-13 11-21c0-6-5-11-11-11z" fill="none" stroke="var(--biz-c)" stroke-width="2.6"/><circle cx="22" cy="17" r="4" fill="var(--biz-c)"/></svg>',
+    kpi:{monto:["Monto de viajes","$ 905 M"],cantidad:["Cantidad de viajes","214.300"],distractor:["Conductores registrados","18.700"]},
+    aud:{
+      estrategico:{who:"El directorio de Viajá.",what:"Decidir si la empresa va camino al objetivo de facturación del año y en qué ciudades crecer.",how:"Reunión una vez por mes. Una sola pantalla, para mirar de un vistazo.",
+        q:[["¿Estamos cumpliendo el objetivo anual de facturación?","Facturación vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionó la facturación en los últimos 12 meses?","Facturación últimos 12 meses","lineas",null,"tend"],["¿Qué tipo de viaje (auto, moto, envíos) aporta la mayor proporción de la facturación?","Facturación por tipo de viaje","barrasH","treemap","tend"],["¿Las ciudades con más descuentos tienen más viajes?","Descuentos vs. viajes por ciudad","dispersion",null,"detalle"]]},
+      tactico:{who:"La gerenta de operaciones de la ciudad.",what:"Entender por qué hay más cancelaciones y qué conductores o servicios mejorar.",how:"Cada lunes, filtrando y comparando contra semanas anteriores.",
+        q:[["¿Cómo vienen los viajes de la semana contra la meta?","Viajes semana vs. meta","bala",null,"estado"],["¿Cómo evolucionaron las cancelaciones semana a semana?","Cancelaciones por semana","lineas","apiladas","tend"],["¿Cómo se componen los viajes según tipo (auto, moto, envíos)?","Viajes por tipo","apiladas","treemap","tend"],["¿Qué conductores tienen mejor y peor calificación?","Ranking de conductores","barrasH",null,"detalle"]]},
+      operativo:{who:"El supervisor del turno.",what:"Mandar conductores a donde faltan antes de que los pedidos se pierdan.",how:"Pantalla abierta todo el turno, actualizada en tiempo real.",
+        q:[["¿Estamos llegando a la cantidad de viajes esperada para hoy?","Viajes de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene el tiempo de espera hora a hora?","Tiempo de espera por hora","lineas",null,"tend"],["¿En qué franjas horarias y barrios hay más pedidos sin conductor?","Pedidos sin conductor por franja y barrio","calor",null,"tend"],["¿Qué conductores tienen más cancelaciones hoy?","Ranking de cancelaciones","barrasH",null,"detalle"]]}
+    }}
+};
+// Para el directorio y la gerencia manda el monto; para quien opera, la cantidad (es con lo que actúa).
+const kpiPrincipal=aud=>aud==="operativo"?"cantidad":"monto";
+const distractorOk=(dp,pp,sp)=>dp<0||(pp>=0&&dp>pp&&(sp<0||dp>sp));
+
+// ---------- Estado ----------
+let S=load()||{screen:"start",alias:""};
+function load(){try{if(location.hash==="#reiniciar"){localStorage.removeItem(KEY);history.replaceState(null,"",location.pathname+location.search);return null}return JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){return null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const elapsed=()=>S.startedAt?Math.min(LIMIT,(Date.now()-S.startedAt)/1000):0;
+const fmtT=s=>{s=Math.max(0,Math.ceil(s));const m=Math.floor(s/60),r=s-m*60;return m+":"+(r<10?"0":"")+r};
+const A=()=>BIZ[S.biz].aud[S.aud];
+const app=document.getElementById("app");
+let tick=null;
+
+function topbar(step,total){
+  const left=LIMIT-elapsed();
+  return `<div class="topbar"><div class="row"><span class="tag" style="--c:${BIZ[S.biz].c}"><i></i>${esc(BIZ[S.biz].n)}</span><span class="clock${left<30?" low":""}" id="clock" aria-label="Tiempo restante">${fmtT(left)}</span></div><div class="progress"><div style="width:${step/total*100}%"></div></div></div>`;
+}
+function startClock(){
+  clearInterval(tick);
+  tick=setInterval(()=>{
+    const left=LIMIT-elapsed(),c=document.getElementById("clock");
+    if(c){c.textContent=fmtT(left);c.classList.toggle("low",left<30)}
+    if(left<=0){clearInterval(tick);finish()}
+  },250);
+}
+function render(){window.scrollTo(0,0);({start:rStart,brief:rBrief,tipo:rTipo,q:rQ,place:rPlace,result:rResult})[S.screen]()}
+
+// ---------- Inicio ----------
+function rStart(){
+  clearInterval(tick);
+  app.innerHTML=`<section class="hero">
+    <span class="eyebrow">Webinar · Diseño y construcción de tableros</span>
+    <h1>Misión<br><span>Tablero</span></h1>
+    <p class="muted">Vas a diseñar un tablero para una audiencia real. Tenés 5 minutos y una sola oportunidad.</p>
+    <div class="steps"><div><b>01</b><span>Tipo de tablero</span></div><div><b>02</b><span>Elegir gráficos</span></div><div><b>03</b><span>Armar el lienzo</span></div></div>
+  </section>
+  <label class="field" for="alias">Tu nombre (para entregar los premios)
+    <input type="text" id="alias" maxlength="28" autocomplete="nickname" placeholder="Ej.: Carla R." value="${esc(S.alias||"")}"></label>
+  <h3>Elegí un negocio</h3>
+  <div class="bizlist">${Object.entries(BIZ).map(([k,b])=>`<button type="button" class="biz" style="--c:${b.c}" data-b="${k}" id="biz-${k}">${b.ico}<span><strong>${b.n}</strong><small>${b.d}</small></span></button>`).join("")}</div>
+  <p class="hint" id="hint"></p>
+  <footer>Datos y empresas ficticios con fines didácticos</footer>`;
+  const inp=document.getElementById("alias"),btns=app.querySelectorAll(".biz");
+  const upd=()=>{const ok=inp.value.trim().length>=2;btns.forEach(b=>b.disabled=!ok);document.getElementById("hint").textContent=ok?"Al elegir el negocio empieza a correr el reloj.":"Escribí tu nombre para habilitar los negocios."};
+  inp.addEventListener("input",()=>{S.alias=inp.value;upd()});upd();
+  btns.forEach(b=>b.onclick=()=>{
+    S.alias=inp.value.trim();S.biz=b.dataset.b;
+    S.aud=["estrategico","tactico","operativo"][Math.floor(Math.random()*3)];
+    S.order=shuffle([0,1,2,3]);S.charts=[null,null,null,null];S.tipo=null;S.qi=0;
+    S.items=[];S.palOrder=shuffle(["c0","c1","c2","c3"]).concat(shuffle(["monto","cantidad","distractor"]));S.sel=null;
+    S.startedAt=Date.now();S.screen="brief";save();render();
+  });
+}
+
+const briefHTML=a=>`<dl><dt>Quién</dt><dd>${a.who}</dd><dt>Qué</dt><dd>${a.what}</dd><dt>Cómo</dt><dd>${a.how}</dd></dl>`;
+
+function rBrief(){
+  app.innerHTML=topbar(0,6)+`<div class="card brief"><span class="eyebrow">Tu encargo</span>${briefHTML(A())}</div>
+    <p class="muted">Leelo con atención: de acá sale todo lo que vas a decidir.</p>
+    <button type="button" class="primary" id="go">Empezar</button>`;
+  document.getElementById("go").onclick=()=>{S.screen="tipo";save();render()};
+  startClock();
+}
+
+// ---------- Paso 1 ----------
+function rTipo(){
+  app.innerHTML=topbar(1,6)+`<span class="eyebrow">Paso 1 de 3 · Planificación</span>
+    <h2>¿Qué tipo de tablero necesita esta audiencia?</h2>
+    <div class="card brief">${briefHTML(A())}</div>
+    <div class="choices">${[["estrategico","Estratégico","Monitorear la dirección general"],["tactico","Táctico","Diagnosticar y priorizar"],["operativo","Operativo","Actuar de inmediato"]].map(([k,n,d])=>`<button type="button" class="choice" data-k="${k}" id="tipo-${k}" aria-pressed="${S.tipo===k}"><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>
+    <button type="button" class="primary" id="next" ${S.tipo?"":"disabled"}>Siguiente</button>`;
+  app.querySelectorAll(".choice").forEach(b=>b.onclick=()=>{S.tipo=b.dataset.k;save();rTipo()});
+  document.getElementById("next").onclick=()=>{S.screen="q";S.qi=0;save();render()};
+  startClock();
+}
+
+// ---------- Paso 2 ----------
+function rQ(){
+  const i=S.qi,qi=S.order[i],q=A().q[qi];
+  app.innerHTML=topbar(2+i*.75,6)+`<span class="eyebrow">Paso 2 de 3 · Gráfico ${i+1} de 4</span>
+    <p class="qtext">${q[0]}</p>
+    <div class="charts">${CH_ORDER.map(k=>`<button type="button" class="chart" data-k="${k}" id="ch-${k}" aria-pressed="${S.charts[qi]===k}">${icon(k)}<span>${CH[k].n}</span></button>`).join("")}</div>
+    <div style="display:flex;gap:8px"><button type="button" class="secondary" id="back" style="width:auto">Atrás</button>
+    <button type="button" class="primary" id="next" ${S.charts[qi]?"":"disabled"}>${i<3?"Siguiente pregunta":"Ir al lienzo"}</button></div>`;
+  app.querySelectorAll(".chart").forEach(b=>b.onclick=()=>{S.charts[qi]=b.dataset.k;save();rQ()});
+  document.getElementById("back").onclick=()=>{if(i===0)S.screen="tipo";else S.qi--;save();render()};
+  document.getElementById("next").onclick=()=>{if(i<3)S.qi++;else S.screen="place";save();render()};
+  startClock();
+}
+
+// ---------- Paso 3: lienzo que se arma con toques ----------
+// Ítems: "c0".."c3" (gráficos de cada pregunta) o "monto" / "cantidad" / "distractor" (tarjetas KPI)
+const isKpi=id=>!/^c\d$/.test(id);
+const spanMin=id=>isKpi(id)?1:2;
+function itemLabel(id){const b=BIZ[S.biz];return isKpi(id)?b.kpi[id][0]:A().q[+id.slice(1)][1]}
+function layout(){ // simula el flujo de la grilla de 4 columnas y devuelve la fila de cada ítem
+  let row=0,col=0;const rows={};
+  S.items.forEach(it=>{if(col+it.s>4){row++;col=0}rows[it.id]=row;col+=it.s});
+  return {rows,last:S.items.length?row:0};
+}
+function layerOfRow(r,last){return r===0?"estado":(r===last?"detalle":"tend")}
+
+function rPlace(){
+  app.innerHTML=topbar(5,6)+`<span class="eyebrow">Paso 3 de 3 · Armá el lienzo</span>
+    <h2>Armá tu tablero</h2>
+    <p class="muted">Tocá un elemento para sumarlo. Se ubica en orden de lectura, como la Z. Tocá un elemento del lienzo para moverlo, cambiarle el ancho o quitarlo.</p>
+    <div class="palette" id="palette"></div>
+    <div class="canvas-wrap"><div class="pbi-bar"><span>${esc(BIZ[S.biz].n)} · Página 1</span><span id="count"></span></div><div class="canvas" id="cv" aria-label="Lienzo del tablero" aria-live="polite"></div></div>
+    <div class="toolbar" id="toolbar"></div>
+    <button type="button" class="primary" id="send">Entregar mi tablero</button>
+    <button type="button" class="secondary" id="back">Volver a los gráficos</button>`;
+  document.getElementById("send").onclick=finish;
+  document.getElementById("back").onclick=()=>{S.screen="q";S.qi=3;save();render()};
+  drawPlace();startClock();
+}
+function drawPlace(){
+  const b=BIZ[S.biz],onCv=new Set(S.items.map(i=>i.id));
+  const palBtn=id=>{const kp=isKpi(id),ci=kp?null:+id.slice(1);
+    return `<button type="button" class="pal" id="pal-${id}" data-id="${id}" ${onCv.has(id)?"disabled":""}>${kp?`<span class="plus">＋</span>`:icon(S.charts[ci])}<span>${esc(itemLabel(id))}${onCv.has(id)?" <small class='muted'>· en el lienzo</small>":""}</span></button>`};
+  document.getElementById("palette").innerHTML=`<h3>Tus gráficos</h3><div class="pal-grid">${S.palOrder.filter(id=>!isKpi(id)).map(palBtn).join("")}</div>
+    <h3 style="margin-top:10px">Tarjetas KPI (elegí las que hagan falta)</h3><div class="pal-grid">${S.palOrder.filter(isKpi).map(palBtn).join("")}</div>`;
+  app.querySelectorAll(".pal").forEach(p=>p.onclick=()=>{
+    const id=p.dataset.id;if(onCv.has(id))return;
+    S.items.push({id,s:spanMin(id)});S.sel=id;save();drawPlace();
+  });
+  const cv=document.getElementById("cv");
+  cv.innerHTML=S.items.length?S.items.map(it=>{
+    if(isKpi(it.id)){const [n,v]=b.kpi[it.id];return `<button type="button" class="tile kpi" style="--s:${it.s}" data-id="${it.id}" id="t-${it.id}" aria-pressed="${S.sel===it.id}"><span class="tt">${esc(n)}</span><span class="kv">${v}</span></button>`}
+    const ci=+it.id.slice(1);return `<button type="button" class="tile" style="--s:${it.s}" data-id="${it.id}" id="t-${it.id}" aria-pressed="${S.sel===it.id}">${icon(S.charts[ci],"var(--tile-accent)")}<span class="tt">${esc(A().q[ci][1])}</span></button>`;
+  }).join(""):`<div class="empty">Lienzo en blanco.<br>Tocá los elementos de arriba para sumarlos.</div>`;
+  cv.querySelectorAll(".tile").forEach(t=>t.onclick=()=>{S.sel=S.sel===t.dataset.id?null:t.dataset.id;save();drawPlace()});
+  const charts=S.items.filter(i=>!isKpi(i.id)).length;
+  document.getElementById("count").textContent=charts+" de 4 gráficos";
+  const send=document.getElementById("send");send.disabled=charts<4;
+  send.textContent=charts<4?`Sumá tus 4 gráficos para entregar`:"Entregar mi tablero";
+  const tb=document.getElementById("toolbar"),idx=S.items.findIndex(i=>i.id===S.sel);
+  if(idx<0){tb.innerHTML=`<p class="muted">Tocá un elemento del lienzo para moverlo o cambiarle el ancho.</p>`;return}
+  const it=S.items[idx],wide=it.s>spanMin(it.id);
+  tb.innerHTML=`<p>Seleccionado: <strong>${esc(itemLabel(it.id))}</strong></p><div class="tools">
+    <button type="button" id="mv-up" ${idx===0?"disabled":""}><b>←</b>Antes</button>
+    <button type="button" id="mv-down" ${idx===S.items.length-1?"disabled":""}><b>→</b>Después</button>
+    <button type="button" id="mv-size"><b>⇔</b>${wide?"Más angosto":"Más ancho"}</button>
+    <button type="button" id="mv-del"><b>✕</b>Quitar</button></div>`;
+  const swap=(a,c)=>{[S.items[a],S.items[c]]=[S.items[c],S.items[a]]};
+  document.getElementById("mv-up").onclick=()=>{swap(idx,idx-1);save();drawPlace()};
+  document.getElementById("mv-down").onclick=()=>{swap(idx,idx+1);save();drawPlace()};
+  document.getElementById("mv-size").onclick=()=>{it.s=wide?spanMin(it.id):spanMin(it.id)*2;save();drawPlace()};
+  document.getElementById("mv-del").onclick=()=>{S.items.splice(idx,1);S.sel=null;save();drawPlace()};
+}
+
+// ---------- Puntaje ----------
+function score(){
+  const a=A(),{rows,last}=layout();
+  const tipo=S.tipo===S.aud?PTS.tipo:0;
+  let graf=0,jer=0;
+  a.q.forEach((q,i)=>{
+    const c=S.charts[i];if(c===q[2])graf+=PTS.graf;else if(q[3]&&c===q[3])graf+=PTS.grafParcial;
+    const id="c"+i;if(id in rows&&layerOfRow(rows[id],last)===q[4])jer+=PTS.capa;
+  });
+  const pri=kpiPrincipal(S.aud),sec=pri==="monto"?"cantidad":"monto";
+  let kpi=0;
+  if(S.items[0]&&S.items[0].id===pri)kpi+=PTS.kpiPrincipal;else if(rows[pri]===0)kpi+=PTS.kpiPrincipalFila;
+  if(rows[sec]===0)kpi+=PTS.kpiSecundario;
+  // La distractora no resta por estar: resta si aparece antes que las métricas importantes.
+  const pos=id=>S.items.findIndex(i=>i.id===id),dp=pos("distractor");
+  if(distractorOk(dp,pos(pri),pos(sec)))kpi+=PTS.sinDistractora;
+  return {tipo,graf,kpi,jer,rows,last};
+}
+function finish(){
+  if(S.screen==="result")return;
+  clearInterval(tick);
+  const t=elapsed(),r=score(),base=r.tipo+r.graf+r.kpi+r.jer;
+  // La velocidad suma en proporción a lo acertado: entregar rápido sin pensar no rinde.
+  const vel=Math.round(PTS.vel*Math.max(0,1-t/LIMIT)*base/950);
+  S.res={tipo:r.tipo,graf:r.graf,kpi:r.kpi,jer:r.jer,vel,total:base+vel,t:Math.round(t*10)/10,at:Date.now()};
+  S.screen="result";save();render();
+}
+
+// ---------- Resultado ----------
+function rResult(){
+  clearInterval(tick);
+  const r=S.res,a=A(),b=BIZ[S.biz],sc=score();
+  const hh=new Date(r.at).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  const row=(n,v,m)=>`<div class="bk"><span>${n}</span><div class="bar"><div style="width:${v/m*100}%"></div></div><span class="mono">${v}/${m}</span></div>`;
+  app.innerHTML=`<section class="card result" style="margin-top:24px">
+    <span class="eyebrow">Tablero entregado</span>
+    <h2>${esc(S.alias)}</h2>
+    <div class="score" aria-label="Puntaje">${r.total}</div>
+    <p class="muted">de 1.000 puntos · en <span class="mono">${r.t.toFixed(1).replace(".",",")} s</span></p>
+    <div class="meta"><span class="tag" style="--c:${b.c}"><i></i>${b.n}</span><span class="tag" style="--c:var(--accent)"><i></i>Misión ${TYPES[S.aud]}</span></div>
+    <div class="breakdown">${row("Tipo de tablero",r.tipo,150)}${row("Gráficos",r.graf,400)}${row("KPIs",r.kpi,200)}${row("Jerarquía",r.jer,200)}${row("Velocidad",r.vel,50)}</div>
+    <p class="stamp">Entregado a las <span class="mono">${hh}</span> · ahora <span class="mono live" id="now"></span></p>
+  </section>
+  <button type="button" class="secondary" id="show">Ver respuestas correctas</button>
+  <div id="ans" hidden></div>
+  <footer>Mostrá esta pantalla si te nombran entre los mejores de tu misión.</footer>`;
+  const now=document.getElementById("now"),tk=()=>{now.textContent=new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",second:"2-digit"})};tk();setInterval(tk,1000);
+  document.getElementById("show").onclick=()=>{
+    const box=document.getElementById("ans"),btn=document.getElementById("show");box.hidden=!box.hidden;
+    btn.textContent=box.hidden?"Ver respuestas correctas":"Ocultar respuestas";if(box.hidden)return;
+    const pri=kpiPrincipal(S.aud),sec=pri==="monto"?"cantidad":"monto",first=S.items[0]&&S.items[0].id;
+    const kOk=first===pri,kMid=!kOk&&sc.rows[pri]===0;
+    box.className="card";
+    box.innerHTML=`<div class="answers">
+      <div class="ans ${S.tipo===S.aud?"ok":"bad"}"><b>Tipo de tablero: ${TYPES[S.aud]}</b><span class="muted">Elegiste: ${S.tipo?TYPES[S.tipo]:"sin respuesta"}</span></div>
+      <div class="ans ${kOk?"ok":(kMid?"mid":"bad")}"><b>KPI principal arriba a la izquierda: ${esc(b.kpi[pri][0])}</b>
+        <span>${pri==="monto"?"Para quien decide el rumbo del negocio, lo que importa es la plata: la cantidad va en segundo lugar.":"Quien opera actúa sobre la cantidad (gente, transacciones, viajes): el monto va en segundo lugar."}</span>
+        <span class="muted">Pusiste primero: ${first?esc(itemLabel(first)):"nada"}</span></div>
+      <div class="ans ${sc.rows[sec]===0?"ok":"bad"}"><b>KPI secundario en la fila de arriba: ${esc(b.kpi[sec][0])}</b><span class="muted">${sc.rows[sec]===0?"Bien ubicado ✓":(sec in sc.rows?"Lo pusiste más abajo":"No lo pusiste")}</span></div>
+      ${(()=>{const pos=id=>S.items.findIndex(i=>i.id===id),dp=pos("distractor"),ok=distractorOk(dp,pos(pri),pos(sec));
+        return `<div class="ans ${ok?"ok":"bad"}"><b>Trampa: ${esc(b.kpi.distractor[0])}</b><span>Puede estar, pero nunca antes que ${esc(b.kpi[pri][0].toLowerCase())} y ${esc(b.kpi[sec][0].toLowerCase())}: no responde la pregunta principal del encargo.</span><span class="muted">${dp<0?"No la pusiste ✓":(ok?"La pusiste después de las importantes ✓":"La pusiste antes que una métrica más importante")}</span></div>`})()}
+      ${a.q.map((q,i)=>{const c=S.charts[i],cls=c===q[2]?"ok":(q[3]&&c===q[3]?"mid":"bad"),id="c"+i,got=id in sc.rows?layerOfRow(sc.rows[id],sc.last):null;
+        return `<div class="ans ${cls}"><b>${q[0]}</b><span>Mejor opción: ${CH[q[2]].n}${q[3]?` <span class="pill">parcial: ${CH[q[3]].n}</span>`:""}</span><span class="muted">Elegiste: ${c?CH[c].n:"sin respuesta"}</span><span class="muted">Capa correcta: ${LAYERS[q[4]]} ${got===q[4]?"✓":`· quedó en ${got?LAYERS[got]:"ningún lado"}`}</span></div>`}).join("")}
+    </div>`;
+  };
+}
+
+// Reanudar si se recargó en medio del juego
+if(S.screen!=="start"&&S.screen!=="result"&&S.startedAt&&elapsed()>=LIMIT){finish()}else{render()}
+})();
+</script>
+
+</body></html>
