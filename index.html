@@ -1,4 +1,3 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Misión Tablero</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,10 +43,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 
 .hero{padding-top:28px;display:flex;flex-direction:column;gap:14px}
 .hero h1 span{color:var(--accent)}
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.steps div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0}
-.steps b{display:block;font-family:var(--mono);color:var(--accent);font-size:.75rem}
-.steps span{font-size:.82rem}
+.route{display:flex;flex-direction:column;gap:6px;cursor:default;user-select:none}
+.route-l{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.route ol{list-style:none;margin:0;padding:0;display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:.76rem;color:var(--muted)}
+.route li{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.route li b{width:20px;height:20px;border-radius:50%;border:1px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:.68rem;font-weight:400;display:flex;align-items:center;justify-content:center}
+.route .arr{color:var(--line)}
 label.field{display:flex;flex-direction:column;gap:6px;font-size:.85rem;color:var(--muted)}
 input[type=text]{font:inherit;font-size:1rem;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px}
 .bizlist{display:flex;flex-direction:column;gap:10px}
@@ -78,7 +79,6 @@ input[type=text]{font:inherit;font-size:1rem;color:var(--fg);background:var(--su
 .chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;align-items:center;gap:10px;text-align:left;min-width:0}
 .chart svg{flex:none;width:40px;height:30px}
 .chart span{font-size:.85rem;line-height:1.2}
-.charts .chart:last-child:nth-child(odd){grid-column:1/-1}
 
 /* Paso 3: paleta + lienzo */
 .palette h3{font-size:.8rem;font-family:var(--mono);font-weight:400;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
@@ -133,7 +133,7 @@ footer{text-align:center;font-size:.72rem;color:var(--muted)}
 (function(){
 "use strict";
 const LIMIT=300; // 5 minutos
-const KEY="mision-tablero-v2";
+const KEY="mision-tablero-v4";
 const PTS={tipo:150,graf:100,grafParcial:50,kpiPrincipal:100,kpiPrincipalFila:40,kpiSecundario:50,sinDistractora:50,capa:50,vel:50};
 
 // ---------- Gráficos (diapositiva 11) ----------
@@ -141,12 +141,13 @@ const CH={
   lineas:{n:"Gráfico de líneas",s:'<polyline points="3,25 12,16 20,19 29,8 37,5" fill="none" stroke="currentColor" stroke-width="2.4"/>'},
   barrasH:{n:"Barras horizontales",s:'<rect x="3" y="3" width="32" height="5" fill="currentColor"/><rect x="3" y="11" width="24" height="5" fill="currentColor"/><rect x="3" y="19" width="16" height="5" fill="currentColor"/>'},
   bala:{n:"Gráfico de bala",s:'<rect x="3" y="9" width="34" height="12" fill="currentColor" opacity=".25"/><rect x="3" y="12" width="24" height="6" fill="currentColor"/><rect x="30" y="6" width="2.5" height="18" fill="currentColor"/>'},
+  torta:{n:"Gráfico de torta",s:'<circle cx="20" cy="15" r="12" fill="currentColor" opacity=".35"/><path d="M20 15 L20 3 A12 12 0 0 1 31.4 18.7Z" fill="currentColor"/><path d="M20 15 L31.4 18.7 A12 12 0 0 1 14 25.4Z" fill="currentColor" opacity=".65"/>'},
   treemap:{n:"Treemap",s:'<rect x="3" y="3" width="19" height="24" fill="currentColor"/><rect x="24" y="3" width="13" height="13" fill="currentColor" opacity=".6"/><rect x="24" y="18" width="13" height="9" fill="currentColor" opacity=".35"/>'},
   apiladas:{n:"Barras apiladas",s:'<g fill="currentColor"><rect x="4" y="12" width="7" height="15"/><rect x="16" y="6" width="7" height="21"/><rect x="28" y="9" width="7" height="18"/></g><g fill="currentColor" opacity=".4"><rect x="4" y="6" width="7" height="6"/><rect x="16" y="1" width="7" height="5"/><rect x="28" y="3" width="7" height="6"/></g>'},
   dispersion:{n:"Dispersión",s:'<g fill="currentColor"><circle cx="7" cy="23" r="2.2"/><circle cx="13" cy="18" r="2.2"/><circle cx="18" cy="20" r="2.2"/><circle cx="24" cy="12" r="2.2"/><circle cx="30" cy="10" r="2.2"/><circle cx="35" cy="5" r="2.2"/></g>'},
   calor:{n:"Mapa de calor",s:[0,1,2].map(r=>[0,1,2,3].map(c=>`<rect x="${3+c*9}" y="${3+r*8.5}" width="8" height="7.5" fill="currentColor" opacity="${[.25,.9,.5,.15,.6,.35,1,.45,.2,.7,.3,.85][r*4+c]}"/>`).join("")).join("")}
 };
-const CH_ORDER=["lineas","barrasH","bala","treemap","apiladas","dispersion","calor"];
+const CH_ORDER=["lineas","barrasH","bala","torta","treemap","apiladas","dispersion","calor"];
 const icon=(k,c)=>`<svg viewBox="0 0 40 30" aria-hidden="true" style="color:${c||"var(--accent)"}">${CH[k].s}</svg>`;
 
 const LAYERS={estado:"Arriba (estado y metas)",tend:"Medio (tendencias y comparaciones)",detalle:"Abajo (detalle)"};
@@ -156,38 +157,38 @@ const TYPES={estrategico:"Estratégico",tactico:"Táctico",operativo:"Operativo"
 // q: [pregunta, título corto, correcto, parcial|null, capa]
 // kpi: monto, cantidad (el principal depende de la audiencia) y una distractora
 const BIZ={
-  gondola:{n:"La Góndola",d:"Cadena de 40 supermercados",c:"var(--biz-a)",
+  gondola:{n:"SuperMarket",d:"Cadena de 40 supermercados",c:"var(--biz-a)",
     ico:'<svg viewBox="0 0 44 44"><path d="M8 12h4l4 18h18l4-13H15" fill="none" stroke="var(--biz-a)" stroke-width="2.6" stroke-linejoin="round"/><circle cx="18" cy="35" r="2.6" fill="var(--biz-a)"/><circle cx="31" cy="35" r="2.6" fill="var(--biz-a)"/></svg>',
     kpi:{monto:["Monto vendido","$ 412 M"],cantidad:["Cantidad de tickets","128.450"],distractor:["Cantidad de sucursales","40"]},
     aud:{
-      estrategico:{who:"El directorio de La Góndola.",what:"Decidir si la cadena va camino al objetivo de ventas del año y dónde invertir el próximo.",how:"Reunión una vez por mes. Una sola pantalla, para mirar de un vistazo.",
+      estrategico:{who:"El directorio de SuperMarket.",what:"Se reúne para saber si la cadena va camino a cumplir el objetivo de ventas del año y decidir dónde conviene invertir el próximo.",how:"Lo mira una vez por mes, en una sola pantalla y de un vistazo.",
         q:[["¿Estamos cumpliendo el objetivo anual de ventas de la cadena?","Ventas vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionaron las ventas en los últimos 12 meses?","Ventas últimos 12 meses","lineas",null,"tend"],["¿Qué categoría de productos aporta la mayor proporción de las ventas?","Ventas por categoría","barrasH","treemap","tend"],["¿Las sucursales que más invierten en promociones venden más?","Promociones vs. ventas por sucursal","dispersion",null,"detalle"]]},
-      tactico:{who:"La gerenta de la sucursal Centro.",what:"Entender por qué la sucursal no llega a la meta y qué corregir.",how:"Cada lunes, filtrando y comparando contra semanas anteriores.",
-        q:[["¿Cómo viene la sucursal esta semana contra la meta de ventas?","Ventas semana vs. meta","bala",null,"estado"],["¿Cómo evolucionaron las ventas semana a semana?","Ventas por semana","lineas","apiladas","tend"],["¿Cómo se componen las ventas según medio de pago (efectivo, débito, crédito, QR)?","Ventas por medio de pago","apiladas","treemap","tend"],["¿Qué categorías venden mejor y cuáles peor?","Ranking de categorías","barrasH",null,"detalle"]]},
-      operativo:{who:"El encargado de cajas del turno.",what:"Abrir o cerrar cajas a tiempo para que no se formen filas.",how:"En una pantalla junto a las cajas, actualizada todo el día.",
+      tactico:{who:"La gerenta de la sucursal Centro.",what:"Quiere entender por qué la sucursal no está llegando a la meta y qué tiene que corregir.",how:"Lo revisa cada lunes, comparando con las semanas anteriores.",
+        q:[["¿Cómo viene la sucursal esta semana contra la meta de ventas?","Ventas semana vs. meta","bala",null,"estado"],["¿Cómo evolucionaron las ventas semana a semana?","Ventas por semana","lineas","apiladas","tend"],["¿Cómo se componen las ventas según medio de pago (efectivo, débito, crédito, QR)?","Ventas por medio de pago","apiladas","treemap","tend"],["¿Qué productos venden mejor y cuáles peor?","Ranking de productos","barrasH",null,"detalle"]]},
+      operativo:{who:"El encargado de cajas del turno.",what:"Su trabajo es que no se formen filas: abre o cierra cajas según cuánta gente llega. Para él, lo más importante es la cantidad de tickets y de clientes; el monto vendido queda en segundo plano.",how:"Lo tiene en una pantalla junto a las cajas, actualizada durante todo el día.",
         q:[["¿Estamos llegando a la cantidad de tickets esperada para hoy?","Tickets de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene la cantidad de clientes en espera hora a hora?","Clientes en espera por hora","lineas",null,"tend"],["¿En qué franjas horarias y líneas de cajas se forman las filas más largas?","Filas por franja y línea de cajas","calor",null,"tend"],["¿Qué cajas tienen más demoras ahora?","Ranking de demoras por caja","barrasH",null,"detalle"]]}
     }},
-  cobranet:{n:"Cobranet",d:"Plataforma de cobro de servicios e impuestos",c:"var(--biz-b)",
+  cobranet:{n:"Cobro Online",d:"Plataforma de cobro de servicios e impuestos",c:"var(--biz-b)",
     ico:'<svg viewBox="0 0 44 44"><rect x="6" y="11" width="32" height="22" rx="4" fill="none" stroke="var(--biz-b)" stroke-width="2.6"/><rect x="6" y="16" width="32" height="4" fill="var(--biz-b)"/><rect x="11" y="25" width="9" height="3" rx="1" fill="var(--biz-b)"/></svg>',
     kpi:{monto:["Monto recaudado","$ 231 M"],cantidad:["Cantidad de transacciones","356.900"],distractor:["Entes adheridos","1.240"]},
     aud:{
-      estrategico:{who:"El directorio de Cobranet.",what:"Saber si la empresa va camino al objetivo de recaudación del año y qué priorizar.",how:"Reunión una vez por mes. Una sola pantalla, para mirar de un vistazo.",
+      estrategico:{who:"El directorio de Cobro Online.",what:"Necesita saber si la empresa va camino al objetivo de recaudación del año y qué conviene priorizar.",how:"Lo mira una vez por mes, en una sola pantalla y de un vistazo.",
         q:[["¿Estamos cumpliendo el objetivo anual de recaudación?","Recaudación vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionó la recaudación en los últimos 12 meses?","Recaudación últimos 12 meses","lineas",null,"tend"],["¿Qué medio de pago aporta la mayor proporción de la recaudación?","Recaudación por medio de pago","barrasH","treemap","tend"],["¿Los entes con comisión más baja recaudan más?","Comisión vs. recaudación por ente","dispersion",null,"detalle"]]},
-      tactico:{who:"El gerente comercial.",what:"Detectar qué entes o medios de pago están por debajo de lo esperado y actuar.",how:"Cada lunes, filtrando y comparando contra semanas anteriores.",
+      tactico:{who:"El gerente comercial.",what:"Busca detectar qué entes o medios de pago están por debajo de lo esperado, para actuar a tiempo.",how:"Lo revisa cada lunes, comparando con las semanas anteriores.",
         q:[["¿Cómo viene la recaudación de la semana contra la meta?","Recaudación semana vs. meta","bala",null,"estado"],["¿Cómo evolucionó la cantidad de transacciones semana a semana?","Transacciones por semana","lineas","apiladas","tend"],["¿Cómo se compone la recaudación según medio de pago?","Recaudación por medio de pago","apiladas","treemap","tend"],["¿Qué entes recaudan más y cuáles menos?","Ranking de entes","barrasH",null,"detalle"]]},
-      operativo:{who:"La analista de monitoreo de transacciones.",what:"Detectar caídas o rechazos apenas ocurren y avisar al equipo técnico.",how:"Pantalla abierta todo el día, actualizada en tiempo real.",
+      operativo:{who:"La analista de monitoreo.",what:"Vigila que la plataforma funcione bien y avisa al equipo técnico ante cualquier caída. Lo más importante para ella es la cantidad de transacciones que entran sin errores; el monto recaudado queda en segundo plano.",how:"Tiene la pantalla abierta todo el día, actualizada en tiempo real.",
         q:[["¿Estamos llegando al volumen de transacciones esperado para hoy?","Transacciones de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene la tasa de rechazos hora a hora?","Tasa de rechazos por hora","lineas",null,"tend"],["¿En qué franjas horarias y medios de pago se concentran los rechazos?","Rechazos por franja y medio","calor",null,"tend"],["¿Qué entes tienen más pagos rechazados ahora?","Ranking de rechazos por ente","barrasH",null,"detalle"]]}
     }},
-  viaja:{n:"Viajá",d:"App de viajes y envíos",c:"var(--biz-c)",
-    ico:'<svg viewBox="0 0 44 44"><path d="M22 6c-6 0-11 5-11 11 0 8 11 21 11 21s11-13 11-21c0-6-5-11-11-11z" fill="none" stroke="var(--biz-c)" stroke-width="2.6"/><circle cx="22" cy="17" r="4" fill="var(--biz-c)"/></svg>',
-    kpi:{monto:["Monto de viajes","$ 905 M"],cantidad:["Cantidad de viajes","214.300"],distractor:["Conductores registrados","18.700"]},
+  viaja:{n:"Viajá",d:"Agencia de turismo online",c:"var(--biz-c)",
+    ico:'<svg viewBox="0 0 44 44"><path d="M22 5c1.7 0 2.6 1.6 2.6 3.6v8.6l12 7v3.4l-12-3.6v7.2l3.6 2.8v2.8L22 35l-6.2 1.8V34l3.6-2.8V24l-12 3.6v-3.4l12-7V8.6C19.4 6.6 20.3 5 22 5z" fill="none" stroke="var(--biz-c)" stroke-width="2.2" stroke-linejoin="round"/></svg>',
+    kpi:{monto:["Ventas en reservas","$ 905 M"],cantidad:["Cantidad de reservas","48.300"],distractor:["Destinos publicados","1.850"]},
     aud:{
-      estrategico:{who:"El directorio de Viajá.",what:"Decidir si la empresa va camino al objetivo de facturación del año y en qué ciudades crecer.",how:"Reunión una vez por mes. Una sola pantalla, para mirar de un vistazo.",
-        q:[["¿Estamos cumpliendo el objetivo anual de facturación?","Facturación vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionó la facturación en los últimos 12 meses?","Facturación últimos 12 meses","lineas",null,"tend"],["¿Qué tipo de viaje (auto, moto, envíos) aporta la mayor proporción de la facturación?","Facturación por tipo de viaje","barrasH","treemap","tend"],["¿Las ciudades con más descuentos tienen más viajes?","Descuentos vs. viajes por ciudad","dispersion",null,"detalle"]]},
-      tactico:{who:"La gerenta de operaciones de la ciudad.",what:"Entender por qué hay más cancelaciones y qué conductores o servicios mejorar.",how:"Cada lunes, filtrando y comparando contra semanas anteriores.",
-        q:[["¿Cómo vienen los viajes de la semana contra la meta?","Viajes semana vs. meta","bala",null,"estado"],["¿Cómo evolucionaron las cancelaciones semana a semana?","Cancelaciones por semana","lineas","apiladas","tend"],["¿Cómo se componen los viajes según tipo (auto, moto, envíos)?","Viajes por tipo","apiladas","treemap","tend"],["¿Qué conductores tienen mejor y peor calificación?","Ranking de conductores","barrasH",null,"detalle"]]},
-      operativo:{who:"El supervisor del turno.",what:"Mandar conductores a donde faltan antes de que los pedidos se pierdan.",how:"Pantalla abierta todo el turno, actualizada en tiempo real.",
-        q:[["¿Estamos llegando a la cantidad de viajes esperada para hoy?","Viajes de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene el tiempo de espera hora a hora?","Tiempo de espera por hora","lineas",null,"tend"],["¿En qué franjas horarias y barrios hay más pedidos sin conductor?","Pedidos sin conductor por franja y barrio","calor",null,"tend"],["¿Qué conductores tienen más cancelaciones hoy?","Ranking de cancelaciones","barrasH",null,"detalle"]]}
+      estrategico:{who:"El directorio de Viajá.",what:"Quiere saber si la empresa va camino al objetivo de ventas del año y en qué productos o mercados conviene crecer.",how:"Lo mira una vez por mes, en una sola pantalla y de un vistazo.",
+        q:[["¿Estamos cumpliendo el objetivo anual de ventas?","Ventas vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionaron las ventas en los últimos 12 meses?","Ventas últimos 12 meses","lineas",null,"tend"],["¿Qué producto (vuelos, hoteles, paquetes) aporta la mayor proporción de las ventas?","Ventas por producto","barrasH","treemap","tend"],["¿Los países donde más invertimos en publicidad venden más?","Publicidad vs. ventas por país","dispersion",null,"detalle"]]},
+      tactico:{who:"La gerenta comercial.",what:"Quiere entender cómo vienen las ventas, por qué canales llegan y qué destinos están funcionando mejor.",how:"Lo revisa cada lunes, comparando con las semanas anteriores.",
+        q:[["¿Cómo vienen las ventas de la semana contra la meta?","Ventas semana vs. meta","bala",null,"estado"],["¿Cómo evolucionaron las reservas semana a semana?","Reservas por semana","lineas","apiladas","tend"],["¿Cómo se componen las ventas según canal (web, app, call center)?","Ventas por canal","apiladas","treemap","tend"],["¿Qué destinos se venden más y cuáles menos?","Ranking de destinos","barrasH",null,"detalle"]]},
+      operativo:{who:"El analista de operaciones.",what:"Vigila la correcta operatoria de la página. Lo más importante para él es la cantidad de reservas que se concretan sin errores; el monto vendido queda en segundo plano.",how:"Tiene la pantalla abierta todo el día, actualizada en tiempo real.",
+        q:[["¿Estamos llegando a la cantidad de reservas esperada para hoy?","Reservas de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene la tasa de reservas fallidas hora a hora?","Reservas fallidas por hora","lineas",null,"tend"],["¿En qué franjas horarias y canales se caen más reservas?","Reservas caídas por franja y canal","calor",null,"tend"],["¿Qué aerolíneas u hoteles tienen más errores de confirmación ahora?","Ranking de errores por proveedor","barrasH",null,"detalle"]]}
     }}
 };
 // Para el directorio y la gerencia manda el monto; para quien opera, la cantidad (es con lo que actúa).
@@ -226,17 +227,18 @@ function rStart(){
   app.innerHTML=`<section class="hero">
     <span class="eyebrow">Webinar · Diseño y construcción de tableros</span>
     <h1>Misión<br><span>Tablero</span></h1>
-    <p class="muted">Vas a diseñar un tablero para una audiencia real. Tenés 5 minutos y una sola oportunidad.</p>
-    <div class="steps"><div><b>01</b><span>Tipo de tablero</span></div><div><b>02</b><span>Elegir gráficos</span></div><div><b>03</b><span>Armar el lienzo</span></div></div>
+    <p class="muted">Vas a diseñar un tablero para una audiencia específica. Tenés 5 minutos y una sola oportunidad.</p>
+    <div class="route" aria-label="El recorrido del juego"><p class="route-l">Así es el recorrido</p>
+      <ol><li><b>1</b>Tipo de tablero</li><li aria-hidden="true" class="arr">→</li><li><b>2</b>Gráficos</li><li aria-hidden="true" class="arr">→</li><li><b>3</b>Armado del lienzo</li></ol></div>
   </section>
-  <label class="field" for="alias">Tu nombre (para entregar los premios)
-    <input type="text" id="alias" maxlength="28" autocomplete="nickname" placeholder="Ej.: Carla R." value="${esc(S.alias||"")}"></label>
+  <label class="field" for="alias">Tu nombre (opcional)
+    <input type="text" id="alias" maxlength="28" autocomplete="nickname" value="${esc(S.alias||"")}"></label>
   <h3>Elegí un negocio</h3>
   <div class="bizlist">${Object.entries(BIZ).map(([k,b])=>`<button type="button" class="biz" style="--c:${b.c}" data-b="${k}" id="biz-${k}">${b.ico}<span><strong>${b.n}</strong><small>${b.d}</small></span></button>`).join("")}</div>
   <p class="hint" id="hint"></p>
   <footer>Datos y empresas ficticios con fines didácticos</footer>`;
   const inp=document.getElementById("alias"),btns=app.querySelectorAll(".biz");
-  const upd=()=>{const ok=inp.value.trim().length>=2;btns.forEach(b=>b.disabled=!ok);document.getElementById("hint").textContent=ok?"Al elegir el negocio empieza a correr el reloj.":"Escribí tu nombre para habilitar los negocios."};
+  const upd=()=>{document.getElementById("hint").textContent="Al elegir el negocio empieza a correr el reloj."};
   inp.addEventListener("input",()=>{S.alias=inp.value;upd()});upd();
   btns.forEach(b=>b.onclick=()=>{
     S.alias=inp.value.trim();S.biz=b.dataset.b;
@@ -379,7 +381,7 @@ function rResult(){
   const row=(n,v,m)=>`<div class="bk"><span>${n}</span><div class="bar"><div style="width:${v/m*100}%"></div></div><span class="mono">${v}/${m}</span></div>`;
   app.innerHTML=`<section class="card result" style="margin-top:24px">
     <span class="eyebrow">Tablero entregado</span>
-    <h2>${esc(S.alias)}</h2>
+    <h2>${S.alias?esc(S.alias):"Tu tablero"}</h2>
     <div class="score" aria-label="Puntaje">${r.total}</div>
     <p class="muted">de 1.000 puntos · en <span class="mono">${r.t.toFixed(1).replace(".",",")} s</span></p>
     <div class="meta"><span class="tag" style="--c:${b.c}"><i></i>${b.n}</span><span class="tag" style="--c:var(--accent)"><i></i>Misión ${TYPES[S.aud]}</span></div>
@@ -405,7 +407,7 @@ function rResult(){
       ${(()=>{const pos=id=>S.items.findIndex(i=>i.id===id),dp=pos("distractor"),ok=distractorOk(dp,pos(pri),pos(sec));
         return `<div class="ans ${ok?"ok":"bad"}"><b>Trampa: ${esc(b.kpi.distractor[0])}</b><span>Puede estar, pero nunca antes que ${esc(b.kpi[pri][0].toLowerCase())} y ${esc(b.kpi[sec][0].toLowerCase())}: no responde la pregunta principal del encargo.</span><span class="muted">${dp<0?"No la pusiste ✓":(ok?"La pusiste después de las importantes ✓":"La pusiste antes que una métrica más importante")}</span></div>`})()}
       ${a.q.map((q,i)=>{const c=S.charts[i],cls=c===q[2]?"ok":(q[3]&&c===q[3]?"mid":"bad"),id="c"+i,got=id in sc.rows?layerOfRow(sc.rows[id],sc.last):null;
-        return `<div class="ans ${cls}"><b>${q[0]}</b><span>Mejor opción: ${CH[q[2]].n}${q[3]?` <span class="pill">parcial: ${CH[q[3]].n}</span>`:""}</span><span class="muted">Elegiste: ${c?CH[c].n:"sin respuesta"}</span><span class="muted">Capa correcta: ${LAYERS[q[4]]} ${got===q[4]?"✓":`· quedó en ${got?LAYERS[got]:"ningún lado"}`}</span></div>`}).join("")}
+        return `<div class="ans ${cls}"><b>${q[0]}</b><span>Mejor opción: ${CH[q[2]].n}${q[3]?` <span class="pill">parcial: ${CH[q[3]].n}</span>`:""}</span><span class="muted">Elegiste: ${c?CH[c].n:"sin respuesta"}</span>${c==="torta"?`<span>La torta no suma: con más de dos categorías no se pueden comparar bien los ángulos.</span>`:""}<span class="muted">Capa correcta: ${LAYERS[q[4]]} ${got===q[4]?"✓":`· quedó en ${got?LAYERS[got]:"ningún lado"}`}</span></div>`}).join("")}
     </div>`;
   };
 }
@@ -414,5 +416,3 @@ function rResult(){
 if(S.screen!=="start"&&S.screen!=="result"&&S.startedAt&&elapsed()>=LIMIT){finish()}else{render()}
 })();
 </script>
-
-</body></html>
