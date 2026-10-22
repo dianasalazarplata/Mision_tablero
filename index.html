@@ -1,3 +1,9 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 <title>Misión Tablero</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -126,7 +132,8 @@ input[type=text]{font:inherit;font-size:1rem;color:var(--fg);background:var(--su
 footer{text-align:center;font-size:.72rem;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.progress div{transition:none}.tile{animation:none}}
 </style>
-
+</head>
+<body>
 <main id="app"></main>
 
 <script>
@@ -416,3 +423,6 @@ function rResult(){
 if(S.screen!=="start"&&S.screen!=="result"&&S.startedAt&&elapsed()>=LIMIT){finish()}else{render()}
 })();
 </script>
+
+</body>
+</html>
