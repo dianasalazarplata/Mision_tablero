@@ -140,6 +140,11 @@ input[type=text]{font:inherit;font-size:1rem;color:var(--fg);background:var(--su
 .legend{font-size:.68rem;color:var(--tile-muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;border:2px solid var(--c);margin-right:-6px}
 footer{text-align:center;font-size:.72rem;color:var(--muted)}
+.hero h1{display:flex;align-items:center;gap:14px}
+.hero h1 svg{flex:none;width:clamp(56px,16vw,76px);height:auto}
+.topbar .right{display:flex;align-items:center;gap:10px}
+.reset{background:none;border:0;padding:6px 2px;font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.reset.armed{color:var(--bad)}
 @media (prefers-reduced-motion:reduce){.progress div{transition:none}.tile{animation:none}}
 </style>
 </head>
@@ -151,6 +156,7 @@ footer{text-align:center;font-size:.72rem;color:var(--muted)}
 "use strict";
 const LIMIT=300; // 5 minutos
 const KEY="mision-tablero-v4";
+const KEY_N="mision-tablero-intentos"; // cuántas veces se empezó una misión en este celular
 const PTS={tipo:150,graf:100,grafParcial:50,kpiPrincipal:100,kpiPrincipalFila:40,kpiSecundario:50,sinDistractora:50,capa:50,vel:50};
 
 // ---------- Gráficos (diapositiva 11) ----------
@@ -167,6 +173,10 @@ const CH={
 const CH_ORDER=["lineas","barrasH","bala","torta","treemap","apiladas","dispersion","calor"];
 const icon=(k,c)=>`<svg viewBox="0 0 40 30" aria-hidden="true" style="color:${c||"var(--accent)"}">${CH[k].s}</svg>`;
 
+const STAR=["......X......",".....XHX.....",".....XXX.....","....XXXXX....","XXXXXXXXXXXXX",".XXXXXXXXXXX.","..XXKXXXKXX..","...XXXXXXX...","...XXXXXXX...","..XXXX.XXXX..","..XXX...XXX..",".XX.......XX.",".X.........X."];
+const pix=(p,m)=>`<svg viewBox="0 0 ${p[0].length} ${p.length}" shape-rendering="crispEdges" aria-hidden="true">${p.map((r,y)=>[...r].map((c,x)=>m[c]?`<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${m[c]}"/>`:"").join("")).join("")}</svg>`;
+const STAR_SVG=pix(STAR,{X:"#FFC21A",H:"#FFF2A8",K:"#0b1726"});
+
 const LAYERS={estado:"Arriba (estado y metas)",tend:"Medio (tendencias y comparaciones)",detalle:"Abajo (detalle)"};
 const TYPES={estrategico:"Estratégico",tactico:"Táctico",operativo:"Operativo"};
 
@@ -182,8 +192,8 @@ const BIZ={
         q:[["¿Estamos cumpliendo el objetivo anual de ventas de la cadena?","Ventas vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionaron las ventas en los últimos 12 meses?","Ventas últimos 12 meses","lineas",null,"tend"],["¿Qué categoría de productos aporta la mayor proporción de las ventas?","Ventas por categoría","barrasH","treemap","tend"],["¿Las sucursales que más invierten en promociones venden más?","Promociones vs. ventas por sucursal","dispersion",null,"detalle"]]},
       tactico:{who:"La gerenta de la sucursal Centro.",what:"Quiere entender por qué la sucursal no está llegando a la meta y qué tiene que corregir.",how:"Lo revisa cada lunes, comparando con las semanas anteriores.",
         q:[["¿Cómo viene la sucursal esta semana contra la meta de ventas?","Ventas semana vs. meta","bala",null,"estado"],["¿Cómo evolucionaron las ventas semana a semana?","Ventas por semana","lineas","apiladas","tend"],["¿Cómo se componen las ventas según medio de pago (efectivo, débito, crédito, QR)?","Ventas por medio de pago","apiladas","treemap","tend"],["¿Qué productos venden mejor y cuáles peor?","Ranking de productos","barrasH",null,"detalle"]]},
-      operativo:{who:"El encargado de cajas del turno.",what:"Su trabajo es que no se formen filas: abre o cierra cajas según cuánta gente llega. Para él, lo más importante es la cantidad de tickets y de clientes; el monto vendido queda en segundo plano.",how:"Lo tiene en una pantalla junto a las cajas, actualizada durante todo el día.",
-        q:[["¿Estamos llegando a la cantidad de tickets esperada para hoy?","Tickets de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene la cantidad de clientes en espera hora a hora?","Clientes en espera por hora","lineas",null,"tend"],["¿En qué franjas horarias y líneas de cajas se forman las filas más largas?","Filas por franja y línea de cajas","calor",null,"tend"],["¿Qué cajas tienen más demoras ahora?","Ranking de demoras por caja","barrasH",null,"detalle"]]}
+      operativo:{who:"El encargado de cajas del turno.",what:"Su trabajo es que no se formen filas: abre o cierra cajas según cuánta gente llega. Para actuar, lo primero que necesita ver es la cantidad de tickets y de clientes, y al lado, el monto vendido.",how:"Lo tiene en una pantalla junto a las cajas, actualizada durante todo el día.",
+        q:[["¿Estamos llegando a la cantidad de tickets esperada para hoy?","Tickets de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene la cantidad de clientes en espera hora a hora?","Clientes en espera por hora","lineas",null,"tend"],["¿En qué franjas horarias y líneas de cajas se forman las filas más largas?","Filas por franja y línea de cajas","calor",null,"detalle"],["¿Qué cajas tienen más demoras ahora?","Ranking de demoras por caja","barrasH",null,"tend"]]}
     }},
   cobranet:{n:"Cobro Online",d:"Plataforma de cobro de servicios e impuestos",c:"var(--biz-b)",
     ico:'<svg viewBox="0 0 44 44"><rect x="6" y="11" width="32" height="22" rx="4" fill="none" stroke="var(--biz-b)" stroke-width="2.6"/><rect x="6" y="16" width="32" height="4" fill="var(--biz-b)"/><rect x="11" y="25" width="9" height="3" rx="1" fill="var(--biz-b)"/></svg>',
@@ -193,8 +203,8 @@ const BIZ={
         q:[["¿Estamos cumpliendo el objetivo anual de recaudación?","Recaudación vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionó la recaudación en los últimos 12 meses?","Recaudación últimos 12 meses","lineas",null,"tend"],["¿Qué medio de pago aporta la mayor proporción de la recaudación?","Recaudación por medio de pago","barrasH","treemap","tend"],["¿Los entes con comisión más baja recaudan más?","Comisión vs. recaudación por ente","dispersion",null,"detalle"]]},
       tactico:{who:"El gerente comercial.",what:"Busca detectar qué entes o medios de pago están por debajo de lo esperado, para actuar a tiempo.",how:"Lo revisa cada lunes, comparando con las semanas anteriores.",
         q:[["¿Cómo viene la recaudación de la semana contra la meta?","Recaudación semana vs. meta","bala",null,"estado"],["¿Cómo evolucionó la cantidad de transacciones semana a semana?","Transacciones por semana","lineas","apiladas","tend"],["¿Cómo se compone la recaudación según medio de pago?","Recaudación por medio de pago","apiladas","treemap","tend"],["¿Qué entes recaudan más y cuáles menos?","Ranking de entes","barrasH",null,"detalle"]]},
-      operativo:{who:"La analista de monitoreo.",what:"Vigila que la plataforma funcione bien y avisa al equipo técnico ante cualquier caída. Lo más importante para ella es la cantidad de transacciones que entran sin errores; el monto recaudado queda en segundo plano.",how:"Tiene la pantalla abierta todo el día, actualizada en tiempo real.",
-        q:[["¿Estamos llegando al volumen de transacciones esperado para hoy?","Transacciones de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene la tasa de rechazos hora a hora?","Tasa de rechazos por hora","lineas",null,"tend"],["¿En qué franjas horarias y medios de pago se concentran los rechazos?","Rechazos por franja y medio","calor",null,"tend"],["¿Qué entes tienen más pagos rechazados ahora?","Ranking de rechazos por ente","barrasH",null,"detalle"]]}
+      operativo:{who:"La analista de monitoreo.",what:"Vigila que la plataforma funcione bien y avisa al equipo técnico ante cualquier caída. Para actuar, lo primero que necesita ver es la cantidad de transacciones que entran sin errores, y al lado, el monto recaudado.",how:"Tiene la pantalla abierta todo el día, actualizada en tiempo real.",
+        q:[["¿Estamos llegando al volumen de transacciones esperado para hoy?","Transacciones de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene la tasa de rechazos hora a hora?","Tasa de rechazos por hora","lineas",null,"tend"],["¿En qué franjas horarias y medios de pago se concentran los rechazos?","Rechazos por franja y medio","calor",null,"detalle"],["¿Qué entes tienen más pagos rechazados ahora?","Ranking de rechazos por ente","barrasH",null,"tend"]]}
     }},
   viaja:{n:"Viajá",d:"Agencia de turismo online",c:"var(--biz-c)",
     ico:'<svg viewBox="0 0 44 44"><path d="M22 5c1.7 0 2.6 1.6 2.6 3.6v8.6l12 7v3.4l-12-3.6v7.2l3.6 2.8v2.8L22 35l-6.2 1.8V34l3.6-2.8V24l-12 3.6v-3.4l12-7V8.6C19.4 6.6 20.3 5 22 5z" fill="none" stroke="var(--biz-c)" stroke-width="2.2" stroke-linejoin="round"/></svg>',
@@ -204,8 +214,8 @@ const BIZ={
         q:[["¿Estamos cumpliendo el objetivo anual de ventas?","Ventas vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionaron las ventas en los últimos 12 meses?","Ventas últimos 12 meses","lineas",null,"tend"],["¿Qué producto (vuelos, hoteles, paquetes) aporta la mayor proporción de las ventas?","Ventas por producto","barrasH","treemap","tend"],["¿Los países donde más invertimos en publicidad venden más?","Publicidad vs. ventas por país","dispersion",null,"detalle"]]},
       tactico:{who:"La gerenta comercial.",what:"Quiere entender cómo vienen las ventas, por qué canales llegan y qué destinos están funcionando mejor.",how:"Lo revisa cada lunes, comparando con las semanas anteriores.",
         q:[["¿Cómo vienen las ventas de la semana contra la meta?","Ventas semana vs. meta","bala",null,"estado"],["¿Cómo evolucionaron las reservas semana a semana?","Reservas por semana","lineas","apiladas","tend"],["¿Cómo se componen las ventas según canal (web, app, call center)?","Ventas por canal","apiladas","treemap","tend"],["¿Qué destinos se venden más y cuáles menos?","Ranking de destinos","barrasH",null,"detalle"]]},
-      operativo:{who:"El analista de operaciones.",what:"Vigila la correcta operatoria de la página. Lo más importante para él es la cantidad de reservas que se concretan sin errores; el monto vendido queda en segundo plano.",how:"Tiene la pantalla abierta todo el día, actualizada en tiempo real.",
-        q:[["¿Estamos llegando a la cantidad de reservas esperada para hoy?","Reservas de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene la tasa de reservas fallidas hora a hora?","Reservas fallidas por hora","lineas",null,"tend"],["¿En qué franjas horarias y canales se caen más reservas?","Reservas caídas por franja y canal","calor",null,"tend"],["¿Qué aerolíneas u hoteles tienen más errores de confirmación ahora?","Ranking de errores por proveedor","barrasH",null,"detalle"]]}
+      operativo:{who:"El analista de operaciones.",what:"Vigila la correcta operatoria de la página. Para actuar, lo primero que necesita ver es la cantidad de reservas que se concretan sin errores, y al lado, el monto vendido.",how:"Tiene la pantalla abierta todo el día, actualizada en tiempo real.",
+        q:[["¿Estamos llegando a la cantidad de reservas esperada para hoy?","Reservas de hoy vs. esperado","bala",null,"estado"],["¿Cómo viene la tasa de reservas fallidas hora a hora?","Reservas fallidas por hora","lineas",null,"tend"],["¿En qué franjas horarias y canales se caen más reservas?","Reservas caídas por franja y canal","calor",null,"detalle"],["¿Qué aerolíneas u hoteles tienen más errores de confirmación ahora?","Ranking de errores por proveedor","barrasH",null,"tend"]]}
     }}
 };
 // Para el directorio y la gerencia manda el monto; para quien opera, la cantidad (es con lo que actúa).
@@ -215,6 +225,17 @@ const distractorOk=(dp,pp,sp)=>dp<0||(pp>=0&&dp>pp&&(sp<0||dp>sp));
 // ---------- Estado ----------
 let S=load()||{screen:"start",alias:""};
 function load(){try{if(location.hash==="#reiniciar"){localStorage.removeItem(KEY);history.replaceState(null,"",location.pathname+location.search);return null}return JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){return null}}
+const getN=()=>{try{return +localStorage.getItem(KEY_N)||0}catch(e){return 0}};
+const bumpN=()=>{try{localStorage.setItem(KEY_N,String(getN()+1))}catch(e){}};
+// Reiniciar: vuelve al inicio (conserva el nombre). Pide un segundo toque para evitar reinicios por error.
+function armReset(btn,label,onGo){
+  btn.onclick=()=>{
+    if(btn.classList.contains("armed")){onGo();return}
+    btn.classList.add("armed");btn.textContent="¿Seguro? Tocá de nuevo";
+    setTimeout(()=>{if(document.body.contains(btn)){btn.classList.remove("armed");btn.textContent=label}},3000);
+  };
+}
+function restart(){clearInterval(tick);clearInterval(nowTick);S={screen:"start",alias:S.alias||""};save();render()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -222,11 +243,11 @@ const elapsed=()=>S.startedAt?Math.min(LIMIT,(Date.now()-S.startedAt)/1000):0;
 const fmtT=s=>{s=Math.max(0,Math.ceil(s));const m=Math.floor(s/60),r=s-m*60;return m+":"+(r<10?"0":"")+r};
 const A=()=>BIZ[S.biz].aud[S.aud];
 const app=document.getElementById("app");
-let tick=null;
+let tick=null,nowTick=null;
 
 function topbar(step,total){
   const left=LIMIT-elapsed();
-  return `<div class="topbar"><div class="row"><span class="tag" style="--c:${BIZ[S.biz].c}"><i></i>${esc(BIZ[S.biz].n)}</span><span class="clock${left<30?" low":""}" id="clock" aria-label="Tiempo restante">${fmtT(left)}</span></div><div class="progress"><div style="width:${step/total*100}%"></div></div></div>`;
+  return `<div class="topbar"><div class="row"><span class="tag" style="--c:${BIZ[S.biz].c}"><i></i>${esc(BIZ[S.biz].n)}</span><span class="right"><button type="button" class="reset" id="reset">↺ Reiniciar</button><span class="clock${left<30?" low":""}" id="clock" aria-label="Tiempo restante">${fmtT(left)}</span></span></div><div class="progress"><div style="width:${step/total*100}%"></div></div></div>`;
 }
 function startClock(){
   clearInterval(tick);
@@ -236,15 +257,16 @@ function startClock(){
     if(left<=0){clearInterval(tick);finish()}
   },250);
 }
-function render(){window.scrollTo(0,0);({start:rStart,brief:rBrief,tipo:rTipo,q:rQ,place:rPlace,result:rResult})[S.screen]()}
+function render(){window.scrollTo(0,0);({start:rStart,brief:rBrief,tipo:rTipo,q:rQ,place:rPlace,result:rResult})[S.screen]();
+  const rb=document.getElementById("reset");if(rb)armReset(rb,"↺ Reiniciar",restart)}
 
 // ---------- Inicio ----------
 function rStart(){
   clearInterval(tick);
   app.innerHTML=`<section class="hero">
     <span class="eyebrow">Webinar · Diseño y construcción de tableros</span>
-    <h1>Misión<br><span>Tablero</span></h1>
-    <p class="muted">Vas a diseñar un tablero para una audiencia específica. Tenés 5 minutos y una sola oportunidad.</p>
+    <h1>${STAR_SVG}<span style="color:inherit">Misión<br><span>Tablero</span></span></h1>
+    <p class="muted">Vas a diseñar un tablero para una audiencia específica. Tenés 5 minutos y la velocidad suma puntos.</p>
     <div class="route" aria-label="El recorrido del juego"><p class="route-l">Así es el recorrido</p>
       <ol><li><b>1</b>Tipo de tablero</li><li aria-hidden="true" class="arr">→</li><li><b>2</b>Gráficos</li><li aria-hidden="true" class="arr">→</li><li><b>3</b>Armado del lienzo</li></ol></div>
   </section>
@@ -253,7 +275,7 @@ function rStart(){
   <h3>Elegí un negocio</h3>
   <div class="bizlist">${Object.entries(BIZ).map(([k,b])=>`<button type="button" class="biz" style="--c:${b.c}" data-b="${k}" id="biz-${k}">${b.ico}<span><strong>${b.n}</strong><small>${b.d}</small></span></button>`).join("")}</div>
   <p class="hint" id="hint"></p>
-  <footer>Datos y empresas ficticios con fines didácticos</footer>`;
+`;
   const inp=document.getElementById("alias"),btns=app.querySelectorAll(".biz");
   const upd=()=>{document.getElementById("hint").textContent="Al elegir el negocio empieza a correr el reloj."};
   inp.addEventListener("input",()=>{S.alias=inp.value;upd()});upd();
@@ -262,7 +284,7 @@ function rStart(){
     S.aud=["estrategico","tactico","operativo"][Math.floor(Math.random()*3)];
     S.order=shuffle([0,1,2,3]);S.charts=[null,null,null,null];S.tipo=null;S.qi=0;
     S.items=[];S.palOrder=shuffle(["c0","c1","c2","c3"]).concat(shuffle(["monto","cantidad","distractor"]));S.sel=null;
-    S.startedAt=Date.now();S.screen="brief";save();render();
+    S.startedAt=Date.now();S.screen="brief";bumpN();S.intento=getN();save();render();
   });
 }
 
@@ -403,12 +425,14 @@ function rResult(){
     <p class="muted">de 1.000 puntos · en <span class="mono">${r.t.toFixed(1).replace(".",",")} s</span></p>
     <div class="meta"><span class="tag" style="--c:${b.c}"><i></i>${b.n}</span><span class="tag" style="--c:var(--accent)"><i></i>Misión ${TYPES[S.aud]}</span></div>
     <div class="breakdown">${row("Tipo de tablero",r.tipo,150)}${row("Gráficos",r.graf,400)}${row("KPIs",r.kpi,200)}${row("Jerarquía",r.jer,200)}${row("Velocidad",r.vel,50)}</div>
-    <p class="stamp">Entregado a las <span class="mono">${hh}</span> · ahora <span class="mono live" id="now"></span></p>
+    <p class="stamp">Entregado a las <span class="mono">${hh}</span> · ahora <span class="mono live" id="now"></span>${S.intento?` · intento <span class="mono live">${S.intento}</span>`:""}</p>
   </section>
   <button type="button" class="secondary" id="show">Ver respuestas correctas</button>
   <div id="ans" hidden></div>
+  <button type="button" class="primary" id="again">↺ Jugar otra vez</button>
   <footer>Mostrá esta pantalla si te nombran entre los mejores de tu misión.</footer>`;
-  const now=document.getElementById("now"),tk=()=>{now.textContent=new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",second:"2-digit"})};tk();setInterval(tk,1000);
+  const now=document.getElementById("now"),tk=()=>{now.textContent=new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",second:"2-digit"})};tk();clearInterval(nowTick);nowTick=setInterval(tk,1000);
+  armReset(document.getElementById("again"),"↺ Jugar otra vez",restart);
   document.getElementById("show").onclick=()=>{
     const box=document.getElementById("ans"),btn=document.getElementById("show");box.hidden=!box.hidden;
     btn.textContent=box.hidden?"Ver respuestas correctas":"Ocultar respuestas";if(box.hidden)return;
@@ -443,7 +467,7 @@ function rResult(){
       <div class="ans ${tipoOk?"ok":"bad"}"><b>Tipo de tablero</b><span>${tipoOk?`Elegiste ${TYPES[S.tipo]}${OK}`:`Elegiste ${S.tipo?TYPES[S.tipo]:"nada"}${NO} · correspondía ${TYPES[S.aud]}`}</span></div>
       <div class="ans ${kOk?"ok":(kMid?"mid":"bad")}"><b>KPI principal, arriba a la izquierda</b>
         <span>${kOk?`Pusiste primero ${low(kPri)}${OK}`:kMid?`${kPri} está en la fila de arriba, pero no primero · parcial`:`Pusiste primero ${first?low(itemLabel(first)):"nada"}${NO} · correspondía ${low(kPri)}`}</span>
-        <span class="muted">${pri==="monto"?`Para quien decide el rumbo del negocio importa la plata: ${low(kPri)} primero y ${low(kSec)} después.`:`Quien opera actúa sobre ${low(kPri)}: por eso va primero y ${low(kSec)} después.`}</span></div>
+        <span class="muted">${pri==="monto"?`Para quien decide el rumbo del negocio, ${low(kPri)} va primero y ${low(kSec)} al lado.`:`Quien opera actúa sobre ${low(kPri)}: por eso va primero, y ${low(kSec)} al lado, porque el monto también importa.`}</span></div>
       <div class="ans ${secOk?"ok":"bad"}"><b>KPI secundario en la fila de arriba</b><span>${secOk?`${kSec}, bien ubicado${OK}`:`${kSec}: ${sec in sc.rows?"lo pusiste más abajo":"no lo pusiste"}${NO}`}</span></div>
       <div class="ans ${dOk?"ok":"bad"}"><b>Trampa: ${esc(b.kpi.distractor[0])}</b><span>${dp<0?`No la pusiste${OK}`:(dOk?`La pusiste después de las importantes${OK}`:`La pusiste antes que una métrica más importante${NO}`)}</span><span class="muted">Puede estar, pero nunca antes que ${low(kPri)} y ${low(kSec)}: no responde la pregunta principal del encargo.</span></div>
       ${qLines}
