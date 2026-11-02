@@ -106,6 +106,10 @@ input[type=text]{font:inherit;font-size:1rem;color:var(--fg);background:var(--su
 .tile .tt{font-size:.66rem;line-height:1.2;color:var(--tile-muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .tile.kpi .kv{font-family:var(--mono);font-weight:600;font-size:.88rem;font-variant-numeric:tabular-nums;color:var(--tile-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile.kpi .tt{-webkit-line-clamp:2;font-size:.62rem}
+.tile.kpi .kc{font-size:.58rem;line-height:1.25;color:var(--tile-muted)}
+.tile.kpi .kc b{white-space:nowrap}
+.tile.kpi .kc b{font-family:var(--mono);font-weight:600}
+.tile.kpi .kc b.up{color:#1f8a5b} .tile.kpi .kc b.down{color:#c2413a} .tile.kpi .kc b.eq{color:var(--tile-muted)}
 .tile[aria-pressed="true"]{box-shadow:0 0 0 3px var(--tile-sel)}
 .toolbar{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px}
 .toolbar p{font-size:.82rem}
@@ -186,7 +190,7 @@ const TYPES={estrategico:"Estratégico",tactico:"Táctico",operativo:"Operativo"
 const BIZ={
   gondola:{n:"SuperMarket",d:"Cadena de 40 supermercados",c:"var(--biz-a)",
     ico:'<svg viewBox="0 0 44 44"><path d="M8 12h4l4 18h18l4-13H15" fill="none" stroke="var(--biz-a)" stroke-width="2.6" stroke-linejoin="round"/><circle cx="18" cy="35" r="2.6" fill="var(--biz-a)"/><circle cx="31" cy="35" r="2.6" fill="var(--biz-a)"/></svg>',
-    kpi:{monto:["Monto vendido","$ 412 M"],cantidad:["Cantidad de tickets","128.450"],distractor:["Cantidad de sucursales","40"]},
+    kpi:{monto:["Monto vendido","$ 412 M","+8%"],cantidad:["Cantidad de tickets","128.450","-3%"],distractor:["Cantidad de sucursales","40","="]},
     aud:{
       estrategico:{who:"El directorio de SuperMarket.",what:"Se reúne para saber si la cadena va camino a cumplir el objetivo de ventas del año y decidir dónde conviene invertir el próximo.",how:"Lo mira una vez por mes, en una sola pantalla y de un vistazo.",
         q:[["¿Estamos cumpliendo el objetivo anual de ventas de la cadena?","Ventas vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionaron las ventas en los últimos 12 meses?","Ventas últimos 12 meses","lineas",null,"tend"],["¿Qué categoría de productos aporta la mayor proporción de las ventas?","Ventas por categoría","barrasH","treemap","tend"],["¿Las sucursales que más invierten en promociones venden más?","Promociones vs. ventas por sucursal","dispersion",null,"detalle"]]},
@@ -197,7 +201,7 @@ const BIZ={
     }},
   cobranet:{n:"Cobro Online",d:"Plataforma de cobro de servicios e impuestos",c:"var(--biz-b)",
     ico:'<svg viewBox="0 0 44 44"><rect x="6" y="11" width="32" height="22" rx="4" fill="none" stroke="var(--biz-b)" stroke-width="2.6"/><rect x="6" y="16" width="32" height="4" fill="var(--biz-b)"/><rect x="11" y="25" width="9" height="3" rx="1" fill="var(--biz-b)"/></svg>',
-    kpi:{monto:["Monto recaudado","$ 231 M"],cantidad:["Cantidad de transacciones","356.900"],distractor:["Entes adheridos","1.240"]},
+    kpi:{monto:["Monto recaudado","$ 231 M","+12%"],cantidad:["Cantidad de transacciones","356.900","+5%"],distractor:["Entes adheridos","1.240","+2%"]},
     aud:{
       estrategico:{who:"El directorio de Cobro Online.",what:"Necesita saber si la empresa va camino al objetivo de recaudación del año y qué conviene priorizar.",how:"Lo mira una vez por mes, en una sola pantalla y de un vistazo.",
         q:[["¿Estamos cumpliendo el objetivo anual de recaudación?","Recaudación vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionó la recaudación en los últimos 12 meses?","Recaudación últimos 12 meses","lineas",null,"tend"],["¿Qué medio de pago aporta la mayor proporción de la recaudación?","Recaudación por medio de pago","barrasH","treemap","tend"],["¿Los entes con comisión más baja recaudan más?","Comisión vs. recaudación por ente","dispersion",null,"detalle"]]},
@@ -208,7 +212,7 @@ const BIZ={
     }},
   viaja:{n:"Viajá",d:"Agencia de turismo online",c:"var(--biz-c)",
     ico:'<svg viewBox="0 0 44 44"><path d="M22 5c1.7 0 2.6 1.6 2.6 3.6v8.6l12 7v3.4l-12-3.6v7.2l3.6 2.8v2.8L22 35l-6.2 1.8V34l3.6-2.8V24l-12 3.6v-3.4l12-7V8.6C19.4 6.6 20.3 5 22 5z" fill="none" stroke="var(--biz-c)" stroke-width="2.2" stroke-linejoin="round"/></svg>',
-    kpi:{monto:["Ventas en reservas","$ 905 M"],cantidad:["Cantidad de reservas","48.300"],distractor:["Destinos publicados","1.850"]},
+    kpi:{monto:["Ventas en reservas","$ 905 M","+6%"],cantidad:["Cantidad de reservas","48.300","-4%"],distractor:["Destinos publicados","1.850","+1%"]},
     aud:{
       estrategico:{who:"El directorio de Viajá.",what:"Quiere saber si la empresa va camino al objetivo de ventas del año y en qué productos o mercados conviene crecer.",how:"Lo mira una vez por mes, en una sola pantalla y de un vistazo.",
         q:[["¿Estamos cumpliendo el objetivo anual de ventas?","Ventas vs. objetivo anual","bala",null,"estado"],["¿Cómo evolucionaron las ventas en los últimos 12 meses?","Ventas últimos 12 meses","lineas",null,"tend"],["¿Qué producto (vuelos, hoteles, paquetes) aporta la mayor proporción de las ventas?","Ventas por producto","barrasH","treemap","tend"],["¿Los países donde más invertimos en publicidad venden más?","Publicidad vs. ventas por país","dispersion",null,"detalle"]]},
@@ -220,6 +224,10 @@ const BIZ={
 };
 // Para el directorio y la gerencia manda el monto; para quien opera, la cantidad (es con lo que actúa).
 const kpiPrincipal=aud=>aud==="operativo"?"cantidad":"monto";
+// Contexto del KPI: la comparación va debajo del número, contra el período que mira cada audiencia.
+const KPI_VS={estrategico:"vs. mes anterior",tactico:"vs. semana anterior",operativo:"vs. ayer a esta hora"};
+const kpiCtx=d=>{const cls=d==="="?"eq":(d.charAt(0)==="-"?"down":"up"),arr=cls==="up"?"▲ ":cls==="down"?"▼ ":"";
+  return `<span class="kc"><b class="${cls}">${arr}${d==="="?"sin cambios":d.replace("-","")}</b> ${KPI_VS[S.aud]}</span>`};
 const distractorOk=(dp,pp,sp)=>dp<0||(pp>=0&&dp>pp&&(sp<0||dp>sp));
 
 // ---------- Estado ----------
@@ -361,7 +369,7 @@ function drawPlace(){
   });
   const cv=document.getElementById("cv");
   cv.innerHTML=S.items.length?S.items.map(it=>{
-    if(isKpi(it.id)){const [n,v]=b.kpi[it.id];return `<button type="button" class="tile kpi" style="--s:${it.s}" data-id="${it.id}" id="t-${it.id}" aria-pressed="${S.sel===it.id}"><span class="tt">${esc(n)}</span><span class="kv">${v}</span></button>`}
+    if(isKpi(it.id)){const [n,v,d]=b.kpi[it.id];return `<button type="button" class="tile kpi" style="--s:${it.s}" data-id="${it.id}" id="t-${it.id}" aria-pressed="${S.sel===it.id}"><span class="tt">${esc(n)}</span><span class="kv">${v}</span>${kpiCtx(d)}</button>`}
     const ci=+it.id.slice(1);return `<button type="button" class="tile" style="--s:${it.s}" data-id="${it.id}" id="t-${it.id}" aria-pressed="${S.sel===it.id}">${icon(S.charts[ci],"var(--tile-accent)")}<span class="tt">${esc(A().q[ci][1])}</span></button>`;
   }).join(""):`<div class="empty">Lienzo en blanco.<br>Tocá los elementos de arriba para sumarlos.</div>`;
   cv.querySelectorAll(".tile").forEach(t=>t.onclick=()=>{S.sel=S.sel===t.dataset.id?null:t.dataset.id;save();drawPlace()});
